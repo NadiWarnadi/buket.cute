@@ -367,6 +367,7 @@ php artisan tinker
 ## 👥 Contributors
 
 - **Created**: 22 Feb 2026
+- **Software Development Team Lead**: Warnadi (nadi)
 - **GitHub Copilot**: Full stack setup & documentation
 
 ---
