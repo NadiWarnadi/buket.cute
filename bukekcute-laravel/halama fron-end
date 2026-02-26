@@ -1,0 +1,102 @@
+A. Halaman Publik (Untuk Pelanggan) – Tanpa Login
+No	Nama Halaman	Deskripsi / Konten Utama	Keterangan
+1	Beranda (Home)	Hero section, produk unggulan, informasi toko, slider/banner promosi, call-to-action ke katalog.	Menarik perhatian dan mengenalkan toko.
+2	Katalog Produk	Grid/list semua produk dengan foto, nama, harga. Dilengkapi filter kategori, pencarian, dan sorting (terbaru, termurah, termahal).	Menampilkan semua produk aktif.
+3	Detail Produk	Gambar besar, nama, harga, deskripsi, stok (jika ditampilkan), tombol "Pesan via WhatsApp" dengan pilihan jumlah (quantity).	Format pesan otomatis berisi nama produk dan jumlah yang dipilih.
+4	Tentang Kami	Cerita toko, visi-misi, foto pemilik/toko.	Membangun kepercayaan pelanggan.
+5	Kontak	Alamat, peta (Google Maps embed), nomor WhatsApp, email (opsional), link sosial media.	Memudahkan pelanggan menghubungi.
+6	FAQ / Cara Pemesanan	Pertanyaan umum: cara pesan, cara custom, estimasi pengerjaan, ongkir, pembayaran, dll.	Mengurangi pertanyaan berulang.
+7	Halaman Custom / Request	(Opsional) Form sederhana untuk permintaan custom yang langsung dikirim ke WhatsApp.	Alternatif jika pelanggan tidak mau melalui chat.
+8	Halaman 404 / Not Found	Tampilan ramah saat halaman tidak ditemukan.	UX yang baik.
+Catatan: Semua halaman publik menggunakan layout yang sama: navbar (dengan link ke halaman di atas), footer (informasi kontak, sosial media). Desain responsif (mobile-friendly) menggunakan Bootstrap 5 atau Tailwind.
+
+B. Halaman Admin (Dashboard) – Wajib Login
+No	Nama Halaman	Deskripsi / Konten Utama	Keterangan
+1	Login Admin	Form login (email & password).	Halaman terpisah dari publik.
+2	Dashboard Utama	Statistik: total pesanan hari ini, pendapatan, jumlah produk, stok bahan menipis, grafik penjualan (opsional).	Ringkasan cepat untuk admin.
+3	Manajemen Produk	Tabel daftar produk (dengan gambar, nama, kategori, harga, stok, status aktif). Tombol tambah, edit, hapus, toggle status.	CRUD produk.
+4	Tambah / Edit Produk	Form input: nama, slug (otomatis), kategori, deskripsi, harga, stok, upload gambar, status aktif.	Bisa upload banyak gambar? Untuk sederhana, satu gambar utama.
+5	Manajemen Kategori	Tabel daftar kategori, tombol tambah/edit/hapus.	CRUD kategori.
+6	Manajemen Bahan (Ingredients)	Tabel daftar bahan baku (nama, stok, satuan, min stok). Tombol tambah/edit/hapus.	CRUD bahan.
+7	Manajemen Stok Bahan	Halaman untuk melihat histori stok (stock movements) dan menambah stok (pembelian).	Bisa jadi halaman terpisah atau bagian dari detail bahan.
+8	Tambah Pembelian Bahan	Form input: supplier, daftar bahan yang dibeli (nama, jumlah, harga).	Menambah stok bahan sekaligus mencatat pembelian.
+9	Daftar Pesanan (Orders)	Tabel semua pesanan dengan kolom: ID, pelanggan, total, status, tanggal. Filter berdasarkan status.	Bisa klik untuk lihat detail.
+10	Detail Pesanan	Informasi lengkap pesanan: data pelanggan, daftar item (produk atau custom), untuk item custom: deskripsi custom, tombol "Tambah Bahan Custom" (jika item custom). Form untuk update status pesanan.	Di sini admin bisa menetapkan harga untuk item custom dan mencatat bahan yang digunakan.
+11	Manajemen Chat / Pesan	Tabel riwayat pesan WhatsApp (masuk/keluar), bisa filter berdasarkan pelanggan atau pesanan.	Untuk monitoring dan auditing.
+12	Detail Chat	Menampilkan percakapan dengan pelanggan tertentu.	Bisa digunakan untuk melihat konteks chat.
+13	Laporan Penjualan	Filter tanggal, tampilkan total pendapatan, jumlah pesanan, rincian per produk, bisa export (PDF/Excel).	Untuk keperluan evaluasi.
+14	Laporan Stok	Laporan stok bahan saat ini dan histori pergerakan stok.	
+15	Pengaturan Toko	Form edit: nama toko, alamat, nomor WhatsApp, deskripsi, logo, dll.	Juga mungkin pengaturan integrasi WhatsApp (status koneksi).
+Catatan: Semua halaman admin menggunakan layout khusus dengan sidebar navigasi. Bisa menggunakan template admin gratis seperti AdminLTE atau template kustom dengan Bootstrap.
+
+C. Komponen Frontend Umum (Publik)
+Navbar – Logo, link ke Beranda, Katalog, Tentang, Kontak, FAQ. (Untuk admin, navbar/sidebar berbeda).
+
+Footer – Informasi kontak (telepon, WA, email), alamat, sosial media, hak cipta.
+
+Breadcrumb – (Opsional) memudahkan navigasi di halaman katalog/detail.
+
+Pagination – Untuk katalog produk (jika produk banyak).
+
+Toast / Notifikasi – Untuk feedback aksi (misal: "Pesan berhasil dikirim ke WhatsApp").
+
+D. Komponen Admin (Umum)
+Sidebar – Menu navigasi ke semua halaman admin (Dashboard, Produk, Kategori, Bahan, Pesanan, Chat, Laporan, Pengaturan, Logout).
+
+Topbar – Menampilkan user login, notifikasi (opsional).
+
+DataTables – Untuk menampilkan tabel dengan fitur pencarian, sorting, pagination.
+
+Form Validation – Client-side (JavaScript) dan server-side.
+
+Modal – Untuk konfirmasi hapus, form cepat (misal tambah kategori).
+
+Chart – Untuk grafik di dashboard (gunakan Chart.js atau ApexCharts).
+
+E. Integrasi dengan Backend & WhatsApp
+Tombol "Pesan via WhatsApp" di halaman detail produk akan membuat link seperti:
+https://wa.me/628xxxxxx?text=Halo%20saya%20ingin%20memesan%20[NamaProduk]%20sebanyak%20[jumlah]
+
+Jika ingin mencatat pesanan langsung dari website (tanpa WA), perlu fitur checkout, tapi sesuai kesepakatan, semua pemesanan melalui WA.
+
+Untuk custom, di halaman produk bisa disediakan opsi "Custom Request" yang mengarahkan ke WA dengan format khusus.
+
+F. Teknologi Frontend yang Disarankan
+Template Engine: Laravel Blade (untuk kemudahan dan integrasi langsung dengan backend).
+
+CSS Framework: Bootstrap 5 atau Tailwind CSS (pilih sesuai kenyamanan).
+
+JavaScript: Vanilla JS atau Alpine.js untuk interaktivitas ringan (filter, modal). Jika ingin lebih kompleks, bisa pakai Livewire.
+
+Admin Template: Jika ingin cepat, gunakan AdminLTE 3 (Bootstrap 4) atau CoreUI, atau template gratis lainnya.
+
+G. Struktur Halaman (Sitemap)
+text
+Public Site
+├── /
+├── /katalog
+├── /produk/{slug}
+├── /tentang
+├── /kontak
+├── /faq
+└── /custom (opsional)
+
+Admin Panel
+├── /admin/login
+├── /admin/dashboard
+├── /admin/produk
+├── /admin/produk/create
+├── /admin/produk/{id}/edit
+├── /admin/kategori
+├── /admin/bahan
+├── /admin/bahan/create
+├── /admin/bahan/{id}/edit
+├── /admin/pembelian
+├── /admin/pembelian/create
+├── /admin/pesanan
+├── /admin/pesanan/{id}
+├── /admin/chat
+├── /admin/chat/{customer_id}
+├── /admin/laporan/penjualan
+├── /admin/laporan/stok
+└── /admin/pengaturan

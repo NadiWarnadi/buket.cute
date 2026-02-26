@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagram Sistem Pemesanan Toko Bucket Cutie</title>
+    <!-- Font Awesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .diagram-container {
+            max-width: 1300px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px -10px rgba(0,20,30,0.2);
+            padding: 30px 25px;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 600;
+            font-size: 2rem;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #475569;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            border-bottom: 2px dashed #cbd5e1;
+            padding-bottom: 15px;
+        }
+
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .actor-card {
+            background: #f8fafc;
+            border-radius: 28px;
+            padding: 20px 25px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.03);
+            border: 2px solid #e2e8f0;
+            text-align: center;
+            flex: 1 1 200px;
+            transition: transform 0.2s;
+        }
+
+        .actor-card i {
+            font-size: 3rem;
+            color: #0f172a;
+            background: #e6edf5;
+            padding: 15px;
+            border-radius: 60px;
+            margin-bottom: 10px;
+        }
+
+        .actor-card h3 {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .actor-card p {
+            color: #334155;
+            font-size: 0.9rem;
+        }
+
+        /* Komponen besar (Laravel) */
+        .laravel-box {
+            background: linear-gradient(145deg, #ffffff 0%, #f9fcff 100%);
+            border: 3px solid #cbd5e1;
+            border-radius: 42px;
+            padding: 25px 20px;
+            margin: 20px 0;
+            box-shadow: 0 15px 25px -8px rgba(0,35,70,0.15);
+        }
+
+        .laravel-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: #1e293b;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 60px;
+            width: fit-content;
+        }
+
+        .laravel-header i {
+            font-size: 2rem;
+        }
+
+        .laravel-header h2 {
+            font-weight: 500;
+            font-size: 1.6rem;
+        }
+
+        .side-by-side {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        .frontend, .backend {
+            flex: 1 1 300px;
+            background: #f1f5f9;
+            border-radius: 28px;
+            padding: 20px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02), 0 8px 15px rgba(0,20,40,0.05);
+            border: 2px solid #e9eef3;
+        }
+
+        .frontend {
+            border-top: 10px solid #3b82f6;
+        }
+
+        .backend {
+            border-top: 10px solid #f97316;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #0f172a;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 8px 0 8px 25px;
+            position: relative;
+            border-bottom: 1px dashed #cbd5e1;
+            color: #1e293b;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li i {
+            position: absolute;
+            left: 0;
+            top: 10px;
+            color: #3b82f6;
+            font-size: 0.9rem;
+        }
+
+        .backend .feature-list li i {
+            color: #f97316;
+        }
+
+        .mvc-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 40px 0 30px;
+        }
+
+        .mvc-card {
+            background: #ffffff;
+            border-radius: 30px;
+            padding: 20px 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.02);
+            border: 2px solid #d9e2ef;
+            flex: 1 1 150px;
+            text-align: center;
+        }
+
+        .mvc-card i {
+            font-size: 2.2rem;
+            background: #ecf3fa;
+            padding: 15px;
+            border-radius: 50%;
+            color: #1e3a8a;
+        }
+
+        .mvc-card h4 {
+            margin: 15px 0 5px;
+            font-weight: 600;
+        }
+
+        .database-box {
+            background: #1e293b;
+            border-radius: 40px;
+            padding: 20px 30px;
+            color: white;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+            margin: 30px 0 20px;
+        }
+
+        .database-box i {
+            font-size: 2.5rem;
+            background: #334155;
+            padding: 15px;
+            border-radius: 50%;
+        }
+
+        .database-tables {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .table-chip {
+            background: #2d3b4f;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            border: 1px solid #4a5c75;
+        }
+
+        .external-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+            margin: 50px 0 20px;
+        }
+
+        .external-card {
+            background: #ffffff;
+            border: 3px solid #25d366;
+            border-radius: 32px;
+            padding: 20px;
+            flex: 1 1 250px;
+            text-align: center;
+            box-shadow: 0 15px 25px rgba(37,211,102,0.1);
+        }
+
+        .external-card i {
+            font-size: 3rem;
+            color: #25d366;
+        }
+
+        .external-card .title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 10px 0;
+        }
+
+        .node-card {
+            border-color: #8cc84b;
+            box-shadow: 0 15px 25px rgba(140,200,75,0.1);
+        }
+
+        .node-card i {
+            color: #8cc84b;
+        }
+
+        .arrow-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            color: #64748b;
+            font-weight: 500;
+            margin: 15px 0;
+        }
+
+        .arrow-indicator .line {
+            flex: 1;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #94a3b8, transparent);
+        }
+
+        .big-arrow {
+            font-size: 2.5rem;
+            color: #475569;
+            margin: 5px 0;
+        }
+
+        .note {
+            background: #fff8e5;
+            border-radius: 20px;
+            padding: 15px 25px;
+            border-left: 10px solid #fbbf24;
+            margin: 30px 0 10px;
+        }
+
+        @media (max-width: 700px) {
+            .side-by-side {
+                flex-direction: column;
+            }
+            .database-box {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="diagram-container">
+    <h1>🏵️ Toko Bucket Cutie — Sistem Informasi Pemesanan</h1>
+    <div class="subtitle">Arsitektur MVC Laravel 12 + Integrasi Node.js Webhook WhatsApp</div>
+
+    <!-- Actor: Pengunjung dan Admin -->
+    <div class="grid">
+        <div class="actor-card">
+            <i class="fas fa-user"></i>
+            <h3>Pengunjung (Publik)</h3>
+            <p>Akses front-end via browser, tanpa login</p>
+        </div>
+        <div class="actor-card">
+            <i class="fas fa-user-tie"></i>
+            <h3>Admin (Pemilik Toko)</h3>
+            <p>Login ke back-end untuk kelola toko</p>
+        </div>
+    </div>
+
+    <!-- Arah panah ke Laravel -->
+    <div class="arrow-indicator">
+        <span class="line"></span>
+        <i class="fas fa-arrow-down"></i>
+        <span class="line"></span>
+    </div>
+
+    <!-- Komponen Laravel utama -->
+    <div class="laravel-box">
+        <div class="laravel-header">
+            <i class="fab fa-laravel"></i>
+            <h2>Laravel 12 (MVC)</h2>
+        </div>
+
+        <!-- Front-end dan Back-end -->
+        <div class="side-by-side">
+            <!-- Front-end Publik -->
+            <div class="frontend">
+                <div class="section-title">
+                    <i class="fas fa-globe" style="color:#3b82f6;"></i> 
+                    <span>Front-end (Publik)</span>
+                </div>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> Halaman Profil Toko</li>
+                    <li><i class="fas fa-check-circle"></i> Katalog Produk (foto, harga, deskripsi)</li>
+                    <li><i class="fas fa-check-circle"></i> Detail Produk</li>
+                    <li><i class="fas fa-check-circle"></i> Tombol Pesan via WhatsApp</li>
+                </ul>
+            </div>
+
+            <!-- Back-end Admin -->
+            <div class="backend">
+                <div class="section-title">
+                    <i class="fas fa-lock" style="color:#f97316;"></i>
+                    <span>Back-end (Admin)</span>
+                </div>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> Login Admin</li>
+                    <li><i class="fas fa-check-circle"></i> Dashboard & pemantauan stok</li>
+                    <li><i class="fas fa-check-circle"></i> Daftar pesanan masuk & update status</li>
+                    <li><i class="fas fa-check-circle"></i> Laporan penjualan</li>
+                    <li><i class="fas fa-check-circle"></i> Ganti password</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- MVC Components -->
+        <div class="mvc-row">
+            <div class="mvc-card">
+                <i class="fas fa-code-branch"></i>
+                <h4>Controller</h4>
+                <p style="color:#334155;">Memproses request, logika bisnis</p>
+            </div>
+            <div class="mvc-card">
+                <i class="fas fa-database"></i>
+                <h4>Model</h4>
+                <p style="color:#334155;">Interaksi dengan database</p>
+            </div>
+            <div class="mvc-card">
+                <i class="fas fa-eye"></i>
+                <h4>View</h4>
+                <p style="color:#334155;">Tampilan front-end & back-end</p>
+            </div>
+        </div>
+
+        <!-- Database -->
+        <div class="database-box">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <i class="fas fa-database"></i>
+                <span style="font-weight: 600; font-size: 1.3rem;">Database</span>
+            </div>
+            <div class="database-tables">
+                <span class="table-chip">produk</span>
+                <span class="table-chip">pesanan</span>
+                <span class="table-chip">admin</span>
+                <span class="table-chip">... lainnya</span>
+            </div>
+        </div>
+
+        <!-- catatan: data dari node.js masuk ke controller lalu disimpan -->
+        <div style="text-align: right; font-style: italic; color:#475569; margin-top: 5px;">
+            <i class="fas fa-arrow-left"></i> Data dari Node.js diterima controller & disimpan via model
+        </div>
+    </div>
+
+    <!-- Alur integrasi eksternal -->
+    <div class="arrow-indicator">
+        <span class="line"></span>
+        <i class="fas fa-exchange-alt"></i>
+        <span class="line"></span>
+    </div>
+
+    <!-- Node.js dan WhatsApp -->
+    <div class="external-row">
+        <!-- WhatsApp -->
+        <div class="external-card">
+            <i class="fab fa-whatsapp"></i>
+            <div class="title">WhatsApp (User ↔ Admin)</div>
+            <p style="color:#2c3e50;">Pengunjung kirim pesan pemesanan. Admin terima notifikasi.</p>
+            <div style="margin-top: 12px; background: #e8f5e9; border-radius: 40px; padding: 6px 10px; font-size:0.9rem;">
+                <i class="fas fa-webhook"></i> Webhook dikirim ke Node.js
+            </div>
+        </div>
+
+        <!-- Node.js Receiver -->
+        <div class="external-card node-card">
+            <i class="fab fa-node-js"></i>
+            <div class="title">Node.js Webhook Receiver</div>
+            <p style="color:#2c3e50;">Program demo: menerima webhook dari WhatsApp, memproses data, dan mengirim ke endpoint API Laravel.</p>
+            <div style="margin-top: 12px; background: #f1f8e9; border-radius: 40px; padding: 6px 10px;">
+                <i class="fas fa-arrow-right"></i> HTTP request ke Laravel
+            </div>
+        </div>
+    </div>
+
+    <!-- Alur data dari node ke laravel -->
+    <div class="arrow-indicator">
+        <i class="fas fa-arrow-up big-arrow"></i>
+        <span style="background: #d1d5db; padding: 6px 15px; border-radius: 60px; font-weight: 500;">Mengirim data pesanan</span>
+        <i class="fas fa-arrow-up big-arrow"></i>
+    </div>
+
+    <!-- Keterangan tambahan tentang otomatisasi -->
+    <div class="note">
+        <i class="fas fa-bolt" style="color:#eab308; margin-right: 10px;"></i>
+        <strong>Otomatisasi Pencatatan:</strong> Saat pelanggan mengirim pesan via WhatsApp, webhook diterima Node.js → diteruskan ke Laravel → data pesanan langsung tersimpan di database dan muncul di daftar pesanan admin (tanpa input manual).
+    </div>
+
+    <!-- Alur lengkap (ringkasan) -->
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; background: #ecfdf5; border-radius: 50px; padding: 20px; margin-top: 30px;">
+        <div><i class="fas fa-user" style="color:#0f172a;"></i> Pengunjung</div>
+        <div><i class="fas fa-arrow-right"></i></div>
+        <div><i class="fab fa-whatsapp" style="color:#25d366;"></i> WhatsApp</div>
+        <div><i class="fas fa-arrow-right"></i></div>
+        <div><i class="fab fa-node-js" style="color:#8cc84b;"></i> Node.js</div>
+        <div><i class="fas fa-arrow-right"></i></div>
+        <div><i class="fab fa-laravel" style="color:#f9322c;"></i> Laravel (Controller)</div>
+        <div><i class="fas fa-arrow-right"></i></div>
+        <div><i class="fas fa-database"></i> Database</div>
+        <div><i class="fas fa-arrow-right"></i></div>
+        <div><i class="fas fa-user-tie"></i> Admin lihat pesanan</div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 35px; color: #94a3b8; border-top: 2px dashed #e2e8f0; padding-top: 15px;">
+        <i class="fas fa-couch"></i> Toko Bucket Cutie — Indramayu · Sistem Informasi Pemesanan dengan Laravel + Node.js
+    </div>
+</div>
+</body>
+</html>

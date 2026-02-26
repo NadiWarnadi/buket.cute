@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel>
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    
+    <!-- Title -->
+    <mxCell id="title" value="SISTEM INFORMASI PEMESANAN TOKO BUCKET CUTIE" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=20;fontStyle=1" vertex="1" parent="1">
+      <mxGeometry x="320" y="20" width="400" height="40" as="geometry"/>
+    </mxCell>
+    
+    <!-- Actors -->
+    <mxCell id="pengunjung" value="👤 Pengunjung (Publik)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f7ff;strokeColor=#1890ff;" vertex="1" parent="1">
+      <mxGeometry x="180" y="100" width="160" height="60" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="admin" value="👑 Admin (Pemilik Toko)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2e8;strokeColor=#fa8c16;" vertex="1" parent="1">
+      <mxGeometry x="680" y="100" width="160" height="60" as="geometry"/>
+    </mxCell>
+    
+    <!-- Laravel Container -->
+    <mxCell id="laravel" value="LARAVEL 12 (MVC)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f8f9fa;strokeColor=#2d2d2d;" vertex="1" parent="1">
+      <mxGeometry x="140" y="190" width="740" height="380" as="geometry"/>
+    </mxCell>
+    
+    <!-- Frontend -->
+    <mxCell id="frontend" value="FRONT-END (PUBLIK)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#1976d2;" vertex="1" parent="laravel">
+      <mxGeometry x="20" y="50" width="320" height="180" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="fe1" value="• Halaman Profil Toko" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="frontend">
+      <mxGeometry y="30" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="fe2" value="• Katalog Produk" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="frontend">
+      <mxGeometry y="60" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="fe3" value="• Detail Produk" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="frontend">
+      <mxGeometry y="90" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="fe4" value="• Tombol Pesan WhatsApp" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="frontend">
+      <mxGeometry y="120" width="320" height="30" as="geometry"/>
+    </mxCell>
+    
+    <!-- Backend -->
+    <mxCell id="backend" value="BACK-END (ADMIN)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#ed6c02;" vertex="1" parent="laravel">
+      <mxGeometry x="400" y="50" width="320" height="210" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="be1" value="• Login Admin" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="backend">
+      <mxGeometry y="30" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="be2" value="• Dashboard & Manajemen Stok" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="backend">
+      <mxGeometry y="60" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="be3" value="• Daftar Pesanan Masuk" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="backend">
+      <mxGeometry y="90" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="be4" value="• Update Status Pesanan" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="backend">
+      <mxGeometry y="120" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="be5" value="• Laporan Penjualan" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="backend">
+      <mxGeometry y="150" width="320" height="30" as="geometry"/>
+    </mxCell>
+    <mxCell id="be6" value="• Ganti Password" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;whiteSpace=wrap;html=1;" vertex="1" parent="backend">
+      <mxGeometry y="180" width="320" height="30" as="geometry"/>
+    </mxCell>
+    
+    <!-- MVC -->
+    <mxCell id="controller" value="Controller" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3f51b5;" vertex="1" parent="laravel">
+      <mxGeometry x="60" y="260" width="100" height="50" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="model" value="Model" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3f51b5;" vertex="1" parent="laravel">
+      <mxGeometry x="320" y="260" width="100" height="50" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="view" value="View" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eaf6;strokeColor=#3f51b5;" vertex="1" parent="laravel">
+      <mxGeometry x="580" y="260" width="100" height="50" as="geometry"/>
+    </mxCell>
+    
+    <!-- Database -->
+    <mxCell id="db" value="Database&#xa;produk | pesanan | admin" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#616161;" vertex="1" parent="1">
+      <mxGeometry x="470" y="590" width="140" height="90" as="geometry"/>
+    </mxCell>
+    
+    <!-- External: WhatsApp -->
+    <mxCell id="wa" value="WhatsApp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;" vertex="1" parent="1">
+      <mxGeometry x="120" y="630" width="120" height="50" as="geometry"/>
+    </mxCell>
+    
+    <!-- External: Node.js -->
+    <mxCell id="node" value="Node.js&#xa;Webhook Receiver" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#558b2f;" vertex="1" parent="1">
+      <mxGeometry x="300" y="630" width="120" height="60" as="geometry"/>
+    </mxCell>
+    
+    <!-- Connections -->
+    <mxCell id="conn1" edge="1" parent="1" source="pengunjung" target="frontend">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn2" edge="1" parent="1" source="pengunjung" target="wa">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn3" edge="1" parent="1" source="wa" target="node">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn4" edge="1" parent="1" source="node" target="controller">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn5" edge="1" parent="1" source="controller" target="model">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn6" edge="1" parent="1" source="model" target="db">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn7" edge="1" parent="1" source="admin" target="backend">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn8" edge="1" parent="1" source="backend" target="controller">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    
+    <mxCell id="conn9" edge="1" parent="1" source="db" target="backend">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

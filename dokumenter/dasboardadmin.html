@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>🌸 Admin Buket Cute · Dashboard Pink</title>
+    <!-- Font Awesome 6 (gratis) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts: Quicksand (lucu & modern) -->
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Quicksand', sans-serif;
+        }
+
+        body {
+            background-color: #ffe2eb;  /* pink lembut background */
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* container utama */
+        .dashboard {
+            max-width: 1300px;
+            margin: 0 auto;
+            background-color: rgba(255, 245, 248, 0.6); /* transparan pink tipis */
+            border-radius: 40px 40px 30px 30px;
+            box-shadow: 0 20px 40px rgba(245, 120, 160, 0.15);
+            backdrop-filter: blur(2px);
+            padding: 20px 24px;
+        }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #ffb3c6;  /* pink candy */
+            padding: 16px 28px;
+            border-radius: 60px 60px 30px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 0 #d48c9c; /* efek 3D tipis */
+            color: #4a2e3a;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            font-size: 2.2rem;
+            color: #aa4a6a;
+        }
+
+        .profile {
+            font-size: 2.5rem;
+            color: #ffffff;
+            text-shadow: 2px 2px 0 #c96b8b;
+            cursor: default;
+        }
+
+        /* card laporan (report) */
+        .report-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: white;
+            padding: 22px 18px;
+            border-radius: 36px;
+            box-shadow: 0 12px 0 #f7a5b8, 0 5px 15px rgba(250, 140, 170, 0.3);
+            text-align: center;
+            transition: 0.2s;
+            border: 2px solid #fff0f3;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card i {
+            font-size: 2.4rem;
+            background: #ffd9e2;
+            padding: 16px;
+            border-radius: 50%;
+            color: #b34e71;
+            margin-bottom: 12px;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #712e47;
+            letter-spacing: 0.3px;
+            margin-bottom: 6px;
+        }
+
+        .card .angka {
+            font-size: 2.1rem;
+            font-weight: 700;
+            color: #a1345a;
+            line-height: 1.2;
+        }
+
+        /* judul section */
+        .section-title {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #911f4b;
+            margin: 30px 0 15px 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 14px solid #ff98b5;
+            padding-left: 20px;
+        }
+
+        .section-title i {
+            font-size: 2rem;
+            color: #e36489;
+        }
+
+        /* tabel area */
+        .table-wrapper {
+            background: #fff9fb;
+            border-radius: 40px 40px 30px 30px;
+            padding: 16px 10px 16px 16px;
+            box-shadow: inset 0 2px 6px #ffe3ed, 0 12px 0 #e3b2c2;
+            border: 2px solid white;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;  /* supaya rapih, di mobile tetap geser */
+        }
+
+        th {
+            text-align: left;
+            padding: 18px 12px;
+            background-color: #ffccda;
+            color: #581c32;
+            font-weight: 700;
+            font-size: 1rem;
+            border-radius: 30px 30px 0 0;
+        }
+
+        td {
+            padding: 16px 12px;
+            border-bottom: 2px dotted #ffb7c9;
+            color: #492433;
+            font-weight: 500;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-edit, .btn-delete {
+            border: none;
+            background: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: 0.1s;
+            padding: 4px 6px;
+            border-radius: 30px;
+        }
+
+        .btn-edit {
+            color: #b86581;
+            background: #ffeef2;
+        }
+        .btn-edit:hover {
+            background: #ffc1d2;
+            color: #8d2b50;
+        }
+
+        .btn-delete {
+            color: #da7a98;
+            background: #fff0f3;
+        }
+        .btn-delete:hover {
+            background: #feb1c2;
+            color: #b32e5a;
+        }
+
+        /* form tambah (create) */
+        .add-form {
+            background: #ffeef4;
+            padding: 24px 24px 30px;
+            border-radius: 50px;
+            box-shadow: 0 10px 0 #e0a4b8, inset 0 1px 4px white;
+            margin-top: 5px;
+            margin-bottom: 25px;
+        }
+
+        .add-form h3 {
+            font-size: 1.4rem;
+            color: #8c264b;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            flex: 1 1 160px;
+            min-width: 140px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #a23e60;
+            margin-bottom: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid white;
+            border-radius: 50px;
+            background: #fff0f5;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.15s;
+            box-shadow: inset 0 2px 5px #ffd3df;
+        }
+
+        .input-group input:focus {
+            border-color: #ff80a5;
+            background: #ffffff;
+        }
+
+        .btn-pink {
+            background: #ff80a5;
+            border: none;
+            color: white;
+            font-weight: 700;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #b34369;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 2px solid #ffbfd5;
+            margin-top: 6px;
+        }
+
+        .btn-pink:hover {
+            background: #ff6592;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #b34369;
+        }
+
+        .btn-pink:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #b34369;
+        }
+
+        /* RESPONSIVE BREAKPOINTS */
+        @media screen and (max-width: 900px) {
+            .report-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header {
+                padding: 12px 20px;
+            }
+            .logo {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media screen and (max-width: 600px) {
+            body {
+                padding: 8px;
+            }
+            .dashboard {
+                padding: 12px 12px;
+            }
+            .header {
+                border-radius: 40px;
+                padding: 10px 18px;
+            }
+            .logo {
+                font-size: 1.3rem;
+            }
+            .logo i {
+                font-size: 1.8rem;
+            }
+            .profile {
+                font-size: 2rem;
+            }
+            .report-cards {
+                gap: 10px;
+            }
+            .card {
+                padding: 16px 8px;
+            }
+            .card i {
+                font-size: 1.8rem;
+                padding: 12px;
+            }
+            .card .angka {
+                font-size: 1.7rem;
+            }
+            .section-title {
+                font-size: 1.6rem;
+                border-left-width: 10px;
+                padding-left: 12px;
+            }
+            .table-wrapper {
+                padding: 10px 4px;
+                border-radius: 30px;
+            }
+            td, th {
+                padding: 12px 6px;
+                font-size: 0.9rem;
+            }
+            .add-form {
+                padding: 18px 16px;
+            }
+            .form-row {
+                flex-direction: column;
+                gap: 16px;
+            }
+            .input-group {
+                width: 100%;
+            }
+            .btn-pink {
+                width: 100%;
+                justify-content: center;
+                margin-top: 8px;
+            }
+        }
+
+        /* tambahan lucu */
+        .footer-note {
+            text-align: center;
+            margin-top: 40px;
+            color: #b85d7c;
+            font-weight: 500;
+            font-size: 1rem;
+            background: #ffe3ed;
+            padding: 16px;
+            border-radius: 200px;
+            box-shadow: inset 0 2px 8px #ffe2f0;
+        }
+
+        i.fa-solid, i.fa-regular {
+            pointer-events: none;
+        }
+
+        /* sentuhan pink maksimal */
+        ::selection {
+            background: #ffb0c3;
+            color: #3e1b28;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- HEADER dengan nuansa pink -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-bouquet"></i> 
+                Amin's Buket Cute
+            </div>
+            <div class="profile">
+                <i class="fas fa-user-circle"></i>
+            </div>
+        </div>
+
+        <!-- LAPORAN (report cards) -->
+        <div class="report-cards">
+            <div class="card">
+                <i class="fas fa-gift"></i>
+                <h3>Total Produk</h3>
+                <div class="angka">28</div>
+                <span style="font-size:0.85rem;">🌸 +3 minggu ini</span>
+            </div>
+            <div class="card">
+                <i class="fas fa-seedling"></i>
+                <h3>Bahan Baku</h3>
+                <div class="angka">15</div>
+                <span style="font-size:0.85rem;">🧵 5 hampir habis</span>
+            </div>
+            <div class="card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Pendapatan</h3>
+                <div class="angka">Rp 4,8jt</div>
+                <span style="font-size:0.85rem;">📈 +22%</span>
+            </div>
+            <div class="card">
+                <i class="fas fa-truck"></i>
+                <h3>Pesanan Aktif</h3>
+                <div class="angka">13</div>
+                <span style="font-size:0.85rem;">🎀 3 perlu dikirim</span>
+            </div>
+        </div>
+
+        <!-- PRODUK DIJUAL (CRUD) -->
+        <div class="section-title">
+            <i class="fas fa-box-open"></i>  Produk Dijual
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Produk</th>
+                        <th>Harga (Rp)</th>
+                        <th>Stok</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="product-table-body">
+                    <!-- data akan diisi melalui JS, tapi kita isi statis dulu untuk contoh, lalu JS akan menambahkan interaksi -->
+                    <tr>
+                        <td>Buket Mawar Pink</td>
+                        <td>85.000</td>
+                        <td>12</td>
+                        <td><div class="action-btns">
+                            <button class="btn-edit" data-produk="Buket Mawar Pink"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" data-produk="Buket Mawar Pink"><i class="fas fa-trash"></i></button>
+                        </div></td>
+                    </tr>
+                    <tr>
+                        <td>Buket Tulip Cream</td>
+                        <td>95.000</td>
+                        <td>8</td>
+                        <td><div class="action-btns">
+                            <button class="btn-edit" data-produk="Buket Tulip Cream"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" data-produk="Buket Tulip Cream"><i class="fas fa-trash"></i></button>
+                        </div></td>
+                    </tr>
+                    <tr>
+                        <td>Buket Campur Lavender</td>
+                        <td>110.000</td>
+                        <td>5</td>
+                        <td><div class="action-btns">
+                            <button class="btn-edit" data-produk="Buket Campur Lavender"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" data-produk="Buket Campur Lavender"><i class="fas fa-trash"></i></button>
+                        </div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Form TAMBAH PRODUK (CREATE) -->
+        <div class="add-form">
+            <h3><i class="fas fa-plus-circle"></i> Tambah Produk Baru</h3>
+            <form id="form-product">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Nama Produk</label>
+                        <input type="text" id="produk-name" placeholder="misal: Buket Baby Breath" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Harga (Rp)</label>
+                        <input type="number" id="produk-price" placeholder="65000" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Stok</label>
+                        <input type="number" id="produk-stock" placeholder="10" required>
+                    </div>
+                    <button type="submit" class="btn-pink"><i class="fas fa-save"></i> Simpan Produk</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- BAHAN BAKU (CRUD) -->
+        <div class="section-title">
+            <i class="fas fa-leaf"></i>  Bahan Baku
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Bahan</th>
+                        <th>Satuan</th>
+                        <th>Stok</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="material-table-body">
+                    <tr>
+                        <td>Kertas Wrapping</td>
+                        <td>lembar</td>
+                        <td>40</td>
+                        <td><div class="action-btns">
+                            <button class="btn-edit" data-bahan="Kertas Wrapping"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" data-bahan="Kertas Wrapping"><i class="fas fa-trash"></i></button>
+                        </div></td>
+                    </tr>
+                    <tr>
+                        <td>Pita Satin</td>
+                        <td>meter</td>
+                        <td>22</td>
+                        <td><div class="action-btns">
+                            <button class="btn-edit" data-bahan="Pita Satin"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" data-bahan="Pita Satin"><i class="fas fa-trash"></i></button>
+                        </div></td>
+                    </tr>
+                    <tr>
+                        <td>Bunga Artificial</td>
+                        <td>tangkai</td>
+                        <td>60</td>
+                        <td><div class="action-btns">
+                            <button class="btn-edit" data-bahan="Bunga Artificial"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" data-bahan="Bunga Artificial"><i class="fas fa-trash"></i></button>
+                        </div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Form TAMBAH BAHAN (CREATE) -->
+        <div class="add-form">
+            <h3><i class="fas fa-plus-circle"></i> Tambah Bahan Baru</h3>
+            <form id="form-material">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Nama Bahan</label>
+                        <input type="text" id="bahan-name" placeholder="misal: Kertas Krep" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Satuan</label>
+                        <input type="text" id="bahan-unit" placeholder="meter / pcs / lembar" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Stok</label>
+                        <input type="number" id="bahan-stock" placeholder="25" required>
+                    </div>
+                    <button type="submit" class="btn-pink"><i class="fas fa-save"></i> Simpan Bahan</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- footer lucu -->
+        <div class="footer-note">
+            <i class="fas fa-heart" style="color:#f25783;"></i>  dashboard amin — crud produk & bahan • pinky promise  <i class="fas fa-heart" style="color:#f25783;"></i>
+        </div>
+    </div>
+
+    <!-- INTERAKSI SIMULASI CRUD (ALERT + PREVIEW) -->
+    <script>
+        (function() {
+            // Helper: tampilkan alert dengan data produk/bahan
+            function extractRowData(button, type) {
+                const row = button.closest('tr');
+                if (!row) return null;
+                const cells = row.querySelectorAll('td');
+                if (type === 'product') {
+                    return {
+                        name: cells[0]?.innerText.trim() || '?',
+                        price: cells[1]?.innerText.trim() || '?',
+                        stock: cells[2]?.innerText.trim() || '?'
+                    };
+                } else if (type === 'material') {
+                    return {
+                        name: cells[0]?.innerText.trim() || '?',
+                        unit: cells[1]?.innerText.trim() || '?',
+                        stock: cells[2]?.innerText.trim() || '?'
+                    };
+                }
+                return null;
+            }
+
+            // SEMUA TOMBOL EDIT (produk)
+            document.querySelectorAll('#product-table-body .btn-edit').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const data = extractRowData(this, 'product');
+                    if (data) {
+                        alert(`✏️ EDIT PRODUK\n\nNama: ${data.name}\nHarga: Rp ${data.price}\nStok: ${data.stock}\n\n(Fitur edit terintegrasi dengan dashboard Amin)`);
+                    } else {
+                        alert('Edit produk: data tidak ditemukan');
+                    }
+                });
+            });
+
+            // TOMBOL DELETE produk
+            document.querySelectorAll('#product-table-body .btn-delete').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const data = extractRowData(this, 'product');
+                    if (data) {
+                        if (confirm(`🗑️ Hapus produk "${data.name}"?\n(Tindakan ini hanya simulasi, data tidak akan benar-benar hilang)`)) {
+                            alert(`Produk "${data.name}" berhasil dihapus (demo).`);
+                        }
+                    } else {
+                        alert('Hapus produk: gagal');
+                    }
+                });
+            });
+
+            // TOMBOL EDIT bahan
+            document.querySelectorAll('#material-table-body .btn-edit').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const data = extractRowData(this, 'material');
+                    if (data) {
+                        alert(`✏️ EDIT BAHAN\n\nNama: ${data.name}\nSatuan: ${data.unit}\nStok: ${data.stock}\n\n(Dashboard Amin — mode demo)`);
+                    } else {
+                        alert('Edit bahan error');
+                    }
+                });
+            });
+
+            // TOMBOL DELETE bahan
+            document.querySelectorAll('#material-table-body .btn-delete').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const data = extractRowData(this, 'material');
+                    if (data) {
+                        if (confirm(`🧺 Hapus bahan "${data.name}"? (demo)`)) {
+                            alert(`Bahan "${data.name}" dihapus (demo).`);
+                        }
+                    } else {
+                        alert('Hapus bahan error');
+                    }
+                });
+            });
+
+            // FORM TAMBAH PRODUK (simulasi create)
+            const formProduct = document.getElementById('form-product');
+            formProduct.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('produk-name').value.trim();
+                const price = document.getElementById('produk-price').value.trim();
+                const stock = document.getElementById('produk-stock').value.trim();
+
+                if (!name || !price || !stock) {
+                    alert('Harap isi semua field produk!');
+                    return;
+                }
+
+                alert(`🌸 PRODUK DITAMBAHKAN (DEMO)\nNama: ${name}\nHarga: Rp ${Number(price).toLocaleString()}\nStok: ${stock}\n\nTerima kasih! Data akan tampil di sini secara visual (refresh untuk kembali ke data awal).`);
+                this.reset();  // bersihkan form
+            });
+
+            // FORM TAMBAH BAHAN
+            const formMaterial = document.getElementById('form-material');
+            formMaterial.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('bahan-name').value.trim();
+                const unit = document.getElementById('bahan-unit').value.trim();
+                const stock = document.getElementById('bahan-stock').value.trim();
+
+                if (!name || !unit || !stock) {
+                    alert('Semua field bahan harus diisi!');
+                    return;
+                }
+
+                alert(`🧶 BAHAN DITAMBAHKAN (DEMO)\nNama: ${name}\nSatuan: ${unit}\nStok: ${stock}\n\nBahan baru siap digunakan! (cerminan CRUD, hanya simulasi)`);
+                this.reset();
+            });
+
+            // sentuhan: tombol aksi juga bisa pakai data-atribut (sudah)
+        })();
+    </script>
+
+    <!-- Supaya tampilan makin responsif di hp (memastikan form tidak overflow) -->
+</body>
+</html>

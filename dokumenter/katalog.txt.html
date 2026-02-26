@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Katalog Produk • Buket.Cute</title>
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Google Fonts: Quicksand -->
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background-color: #fffafc;
+      color: #4a3f45;
+      line-height: 1.5;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* navbar (sama persis dengan beranda) */
+    .navbar {
+      background-color: #ffffffd9;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(252, 176, 196, 0.15);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid #ffe2eb;
+    }
+
+    .navbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #d46b8d;
+    }
+
+    .logo i {
+      font-size: 2rem;
+      color: #f8a5b2;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .nav-links a {
+      color: #5e4b54;
+      transition: 0.2s;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 4px;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #d46b8d;
+      border-bottom-color: #f8a5b2;
+    }
+
+    .ig-icon a {
+      background: linear-gradient(135deg, #f9cee2, #f8b3c6);
+      padding: 0.6rem 1.2rem;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: 0.3s;
+      box-shadow: 0 6px 12px #fcd1df;
+    }
+
+    .ig-icon a:hover {
+      background: linear-gradient(135deg, #f7b9d4, #f69bb3);
+      transform: scale(1.02);
+      box-shadow: 0 8px 18px #fbb6cc;
+    }
+
+    /* header halaman */
+    .page-header {
+      background: linear-gradient(145deg, #ffe4ed, #ffd6e4);
+      padding: 2.5rem 0 3rem;
+      text-align: center;
+      margin-bottom: 2.5rem;
+      border-radius: 0 0 50px 50px;
+    }
+
+    .page-header h1 {
+      font-size: 2.8rem;
+      color: #b94e6b;
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+      font-size: 1.2rem;
+      color: #8a5366;
+    }
+
+    /* filter kategori */
+    .filter-section {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.8rem;
+      margin: 2rem 0 2.5rem;
+    }
+
+    .filter-btn {
+      background: white;
+      border: 2px solid #fbc1d2;
+      padding: 0.6rem 1.8rem;
+      border-radius: 60px;
+      font-weight: 600;
+      color: #b15471;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 1rem;
+      box-shadow: 0 4px 8px #ffe2ed;
+    }
+
+    .filter-btn.active,
+    .filter-btn:hover {
+      background: #f8b3c6;
+      border-color: #f8a1b9;
+      color: white;
+    }
+
+    /* product grid (lebih besar dari beranda) */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin: 3rem 0;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 40px;
+      padding: 1.8rem 1rem 2rem;
+      box-shadow: 0 15px 30px #fad4e1;
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: 2px solid #fff2f7;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 25px 40px #fbb8cf;
+    }
+
+    .product-img {
+      width: 170px;
+      height: 170px;
+      background: linear-gradient(145deg, #ffe7ee, #ffdae6);
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5.2rem;
+      box-shadow: inset 0 -3px 8px #ffe2ed, 0 12px 18px -8px #fec6d6;
+      border: 4px solid white;
+    }
+
+    .product-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.4rem;
+      color: #b14e6b;
+    }
+
+    .product-desc {
+      font-size: 0.95rem;
+      color: #8d6877;
+      margin-bottom: 1rem;
+      padding: 0 0.5rem;
+    }
+
+    .product-price {
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: #d46b8d;
+      margin: 0.5rem 0 1.2rem;
+    }
+
+    .btn-small {
+      background: #f8cedc;
+      border: none;
+      padding: 0.8rem 2rem;
+      border-radius: 60px;
+      font-weight: 700;
+      color: #a14360;
+      cursor: pointer;
+      transition: 0.2s;
+      border: 2px solid transparent;
+      width: fit-content;
+      margin: 0 auto;
+      font-size: 1rem;
+    }
+
+    .btn-small:hover {
+      background: #f6b9cd;
+      color: #7f354d;
+    }
+
+    /* footer (sama) */
+    footer {
+      background-color: #ffdee9;
+      padding: 2rem 0;
+      text-align: center;
+      border-top: 6px solid white;
+      margin-top: 3rem;
+    }
+
+    .footer-content p {
+      margin: 0.5rem 0;
+      color: #793e52;
+    }
+
+    .footer-ig {
+      font-size: 1.8rem;
+      margin: 1rem 0;
+      color: #b94e6b;
+    }
+
+    .footer-ig a {
+      background: white;
+      padding: 0.5rem 1.5rem;
+      border-radius: 60px;
+      display: inline-block;
+      border: 2px solid #f7a6bd;
+    }
+
+    .small-note {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 700px) {
+      .navbar .container {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .nav-links {
+        gap: 1rem;
+        justify-content: center;
+      }
+      .page-header h1 {
+        font-size: 2.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar (sama) -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo">
+        <i class="fa-solid fa-bouquet"></i>
+        <span>Buket.Cute</span>
+      </div>
+      <div class="nav-links">
+        <a href="index.html">Beranda</a>
+        <a href="#" class="active">Produk</a>
+        <a href="#">Tentang</a>
+        <a href="#">Kontak</a>
+      </div>
+      <div class="ig-icon">
+        <a href="https://instagram.com/buket.cute" target="_blank">
+          <i class="fab fa-instagram"></i> @buket.cute
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header Katalog -->
+  <div class="page-header">
+    <div class="container">
+      <h1>🌸 Katalog Produk</h1>
+      <p>Pilih buket favoritmu, siap bikin hari spesial makin manis</p>
+    </div>
+  </div>
+
+  <!-- Filter kategori (opsional) -->
+  <div class="container">
+    <div class="filter-section">
+      <button class="filter-btn active">Semua</button>
+      <button class="filter-btn">Mawar</button>
+      <button class="filter-btn">Tulip</button>
+      <button class="filter-btn">Bunga Matahari</button>
+      <button class="filter-btn">Mixed</button>
+      <button class="filter-btn">Pastel</button>
+    </div>
+  </div>
+
+  <!-- Grid Produk Lengkap -->
+  <div class="container">
+    <div class="product-grid">
+      <!-- 12 produk dengan variasi -->
+      <!-- 1 -->
+      <div class="product-card">
+        <div class="product-img">🌹</div>
+        <h3>Red Love</h3>
+        <div class="product-desc">Mawar merah premium + baby breath</div>
+        <div class="product-price">Rp135K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 2 -->
+      <div class="product-card">
+        <div class="product-img">🌷</div>
+        <h3>Pink Tulip</h3>
+        <div class="product-desc">Tulip pink import, fresh</div>
+        <div class="product-price">Rp170K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 3 -->
+      <div class="product-card">
+        <div class="product-img">🌻</div>
+        <h3>Sunny Bloom</h3>
+        <div class="product-desc">Bunga matahari ceria + kertas wrapping</div>
+        <div class="product-price">Rp165K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 4 -->
+      <div class="product-card">
+        <div class="product-img">🌸</div>
+        <h3>Sakura Impian</h3>
+        <div class="product-desc">Buket ala Jepang, didominasi pink</div>
+        <div class="product-price">Rp150K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 5 -->
+      <div class="product-card">
+        <div class="product-img">💐</div>
+        <h3>Pastel Dream</h3>
+        <div class="product-desc">Campuran mawar, krisan, stock</div>
+        <div class="product-price">Rp180K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 6 -->
+      <div class="product-card">
+        <div class="product-img">🌼</div>
+        <h3>Daisy Day</h3>
+        <div class="product-desc">Daisy putih + hijau segar</div>
+        <div class="product-price">Rp125K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 7 -->
+      <div class="product-card">
+        <div class="product-img">🌺</div>
+        <h3>Tropical Vibes</h3>
+        <div class="product-desc">Bunga kamboja, heliconia, eksotis</div>
+        <div class="product-price">Rp190K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 8 -->
+      <div class="product-card">
+        <div class="product-img">🌿</div>
+        <h3>Eucalyptus Green</h3>
+        <div class="product-desc">Buket eucalyptus + white roses</div>
+        <div class="product-price">Rp155K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 9 -->
+      <div class="product-card">
+        <div class="product-img">🌹🌹</div>
+        <h3>Double Rose</h3>
+        <div class="product-desc">2 lusin mawar merah mewah</div>
+        <div class="product-price">Rp250K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 10 -->
+      <div class="product-card">
+        <div class="product-img">💮</div>
+        <h3>Lily White</h3>
+        <div class="product-desc">Lili putih elegan + baby breath</div>
+        <div class="product-price">Rp175K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 11 -->
+      <div class="product-card">
+        <div class="product-img">🌾</div>
+        <h3>Dried Pampas</h3>
+        <div class="product-desc">Buket kering pampas, tahan lama</div>
+        <div class="product-price">Rp140K</div>
+        <button class="btn-small">Pesan</button>
+      </div>
+      <!-- 12 -->
+      <div class="product-card">
+        <div class="product-img">🎀</div>
+        <h3>Custom Gift</h3>
+        <div class="product-desc">Kombinasi boneka/cokelat + bunga</div>
+        <div class="product-price">Mulai 200K</div>
+        <button class="btn-small">Tanya DM</button>
+      </div>
+    </div>
+
+    <!-- pesan jika ingin kustom -->
+    <div style="text-align: center; margin: 3rem 0 2rem; background: #ffeef5; padding: 2rem; border-radius: 60px;">
+      <p style="font-size: 1.3rem; color: #b14e6b;">🌷 Ingin rangkaian yang berbeda? <br> Bisa request custom sesuai selera!</p>
+      <a href="https://instagram.com/buket.cute" target="_blank" style="display: inline-block; margin-top: 1rem; background: #d46b8d; color: white; padding: 1rem 2.5rem; border-radius: 60px; font-weight: 700; box-shadow: 0 6px 12px #fbc1d2;">Chat via DM</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-content">
+      <div class="logo" style="justify-content: center; margin-bottom: 1rem;">
+        <i class="fa-solid fa-bouquet"></i>
+        <span>Buket.Cute</span>
+      </div>
+      <p>Bikin momenmu lebih manis dengan buket bunga estetik.</p>
+      <div class="footer-ig">
+        <a href="https://instagram.com/buket.cute" target="_blank">
+          <i class="fab fa-instagram"></i> @buket.cute
+        </a>
+      </div>
+      <p class="small-note">💌 Online order / Yogyakarta</p>
+      <p class="small-note">© 2025 Buket.Cute — all rights reserved</p>
+    </div>
+  </footer>
+
+  <script>
+    // sederhana untuk filter (hanya simulasi, karena tidak ada backend)
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        // di sini bisa ditambahkan logic filter produk, untuk demo hanya alert
+        alert('Filter "'+this.innerText+'" ditekan. (Demo: semua produk tetap tampil)');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Tentang • Buket.Cute</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* GLOBAL & NAVBAR sama seperti index */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Quicksand', sans-serif; background: #fffafc; color: #4a3f45; }
+    .container { width: 90%; max-width: 1200px; margin: 0 auto; }
+    .navbar {
+      background: #ffffffd9; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(252,176,196,0.15); padding: 1rem 0; position: sticky; top: 0; z-index: 100;
+      border-bottom: 2px solid #ffe2eb;
+    }
+    .navbar .container {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.5rem; font-weight: 700; color: #d46b8d; }
+    .logo i { font-size: 1.8rem; color: #f8a5b2; }
+    .nav-links {
+      display: flex; gap: 1.2rem; font-weight: 600; font-size: 1rem; order: 3;
+      width: 100%; justify-content: center; margin-top: 0.5rem; flex-wrap: wrap;
+    }
+    .nav-links a {
+      color: #5e4b54; transition: 0.2s; border-bottom: 2px solid transparent; padding-bottom: 4px;
+    }
+    .nav-links a:hover, .nav-links a.active { color: #d46b8d; border-bottom-color: #f8a5b2; }
+    .ig-icon a {
+      background: linear-gradient(135deg, #f9cee2, #f8b3c6); padding: 0.5rem 1rem; border-radius: 40px;
+      display: flex; align-items: center; gap: 6px; color: white; font-weight: 600; font-size: 0.9rem;
+      box-shadow: 0 6px 12px #fcd1df; white-space: nowrap;
+    }
+    /* KHUSUS TENTANG */
+    .page-header {
+      background: linear-gradient(145deg, #ffe4ed, #ffd6e4);
+      padding: 2rem 0 2.5rem; text-align: center; border-radius: 0 0 40px 40px; margin-bottom: 2rem;
+    }
+    .page-header h1 { font-size: 2.2rem; color: #b94e6b; }
+    .about-section {
+      display: flex; flex-wrap: wrap; gap: 2rem; align-items: center; margin: 3rem 0;
+    }
+    .about-text { flex: 2 1 300px; }
+    .about-text h2 { color: #c1597a; margin-bottom: 1rem; font-size: 1.8rem; }
+    .about-text p { margin-bottom: 1.2rem; font-size: 1.1rem; }
+    .about-text ul { list-style: none; margin: 1.5rem 0; }
+    .about-text li { margin-bottom: 0.8rem; display: flex; align-items: center; gap: 10px; }
+    .about-text i { color: #d46b8d; font-size: 1.3rem; width: 30px; }
+    .about-img { flex: 1 1 250px; text-align: center; }
+    .about-img i { font-size: 10rem; color: #f69bb7; text-shadow: 0 10px 14px #fcc7d8; }
+    /* TEAM */
+    .team-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin: 3rem 0;
+    }
+    .team-card {
+      background: white; border-radius: 40px; padding: 2rem 1rem; text-align: center;
+      box-shadow: 0 15px 30px #fad4e1; border: 2px solid #fff2f7;
+    }
+    .team-img {
+      width: 120px; height: 120px; background: #ffe7ee; border-radius: 50%; margin: 0 auto 1rem;
+      display: flex; align-items: center; justify-content: center; font-size: 4rem; border: 4px solid white;
+    }
+    .team-card h4 { font-size: 1.3rem; color: #b14e6b; }
+    .team-card p { color: #8d6877; }
+    /* FOOTER SAMA */
+    footer {
+      background: #ffdee9; padding: 2rem 0; text-align: center; border-top: 6px solid white;
+    }
+    .footer-ig a {
+      background: white; padding: 0.5rem 1.5rem; border-radius: 60px; display: inline-block;
+      border: 2px solid #f7a6bd;
+    }
+    .small-note { font-size: 0.85rem; opacity: 0.8; }
+    @media (max-width: 480px) {
+      .navbar .container { flex-direction: column; }
+      .logo { font-size: 1.3rem; }
+      .about-text h2 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo"><i class="fa-solid fa-bouquet"></i><span>Buket.Cute</span></div>
+      <div class="ig-icon"><a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i> @buket.cute</a></div>
+      <div class="nav-links">
+        <a href="index.html">Beranda</a>
+        <a href="katalog.html">Katalog</a>
+        <a href="tentang.html" class="active">Tentang</a>
+        <a href="kontak.html">Kontak</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="container">
+      <h1>🌸 Tentang Kami</h1>
+      <p>Cerita di balik @buket.cute dan cinta kami pada bunga</p>
+    </div>
+  </div>
+
+  <!-- ABOUT CONTENT -->
+  <div class="container about-section">
+    <div class="about-text">
+      <h2>Buket.Cute: Manis, Estetik, Berkesan</h2>
+      <p>Berawal dari hobi merangkai bunga pada tahun 2020, kami memutuskan untuk membagikan keindahan buket buatan tangan kepada lebih banyak orang. Setiap buket dibuat dengan penuh perhatian, menggunakan bunga segar pilihan dan dikemas dengan gaya kekinian.</p>
+      <p>Kami percaya bahwa buket bukan sekadar hadiah, tapi juga pesan cinta, persahabatan, atau apresiasi. Itu sebabnya kami selalu mengutamakan kualitas dan kepuasan pelanggan.</p>
+      <ul>
+        <li><i class="fa-solid fa-check-circle"></i> 100% Handmade dengan cinta</li>
+        <li><i class="fa-solid fa-check-circle"></i> Bunga segar setiap hari</li>
+        <li><i class="fa-solid fa-check-circle"></i> Bisa custom sesuai permintaan</li>
+        <li><i class="fa-solid fa-check-circle"></i> Pengemasan aman hingga tujuan</li>
+      </ul>
+    </div>
+    <div class="about-img">
+      <i class="fa-solid fa-seedling"></i>
+    </div>
+  </div>
+
+  <!-- TIM KREATIF -->
+  <div class="container" style="margin-top: 2rem;">
+    <h2 class="section-title">Tim Kreatif Kami</h2>
+    <div class="section-sub">Tangan-tangan terampil di balik setiap buket</div>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-img">👩‍🎨</div>
+        <h4>Dina</h4>
+        <p>Founder & Floral Designer</p>
+      </div>
+      <div class="team-card">
+        <div class="team-img">🧑‍🌾</div>
+        <h4>Raka</h4>
+        <p>Florist & Packing Master</p>
+      </div>
+      <div class="team-card">
+        <div class="team-img">👩‍💻</div>
+        <h4>Sari</h4>
+        <p>Customer Happiness</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container footer-content">
+      <div class="logo" style="justify-content: center;"><i class="fa-solid fa-bouquet"></i> Buket.Cute</div>
+      <p>Bikin momenmu lebih manis dengan buket bunga estetik.</p>
+      <div class="footer-ig"><a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i> @buket.cute</a></div>
+      <p class="small-note">© 2025 Buket.Cute — all rights reserved</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Buket.Cute • Beranda</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: #fffafc;
+      color: #4a3f45;
+      line-height: 1.5;
+    }
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    /* navbar */
+    .navbar {
+      background: #ffffffd9;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(252,176,196,0.15);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 2px solid #ffe2eb;
+    }
+    .navbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #d46b8d;
+    }
+    .logo i {
+      font-size: 1.8rem;
+      color: #f8a5b2;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+      font-weight: 600;
+      font-size: 1rem;
+      order: 3;
+      width: 100%;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+    .nav-links a {
+      color: #5e4b54;
+      transition: 0.2s;
+      border-bottom: 2px solid transparent;
+      padding-bottom: 4px;
+    }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #d46b8d;
+      border-bottom-color: #f8a5b2;
+    }
+    .ig-icon a {
+      background: linear-gradient(135deg, #f9cee2, #f8b3c6);
+      padding: 0.5rem 1rem;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: 0 6px 12px #fcd1df;
+      white-space: nowrap;
+    }
+    /* hero */
+    .hero {
+      background: linear-gradient(135deg, #ffe9f0, #ffd9e8);
+      padding: 2rem 0 3rem;
+      border-radius: 0 0 40px 40px;
+      margin-bottom: 2rem;
+    }
+    .hero .container {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 2rem;
+      flex-direction: column-reverse;
+      text-align: center;
+    }
+    @media (min-width: 768px) {
+      .hero .container {
+        flex-direction: row;
+        text-align: left;
+      }
+    }
+    .hero-text h1 {
+      font-size: 2.2rem;
+      color: #b94e6b;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    @media (min-width: 480px) {
+      .hero-text h1 { font-size: 2.5rem; }
+    }
+    .hero-text .highlight {
+      background: #fff0f5;
+      padding: 0.2rem 1rem;
+      border-radius: 40px;
+      font-size: 1.2rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+    .hero-text p {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero-text .ig-handle {
+      background: #ffffffb3;
+      padding: 0.3rem 1.2rem;
+      border-radius: 60px;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      border: 1px dashed #f7a5b8;
+      display: inline-block;
+    }
+    .btn-group {
+      display: flex;
+      gap: 0.8rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    @media (min-width: 768px) {
+      .btn-group { justify-content: flex-start; }
+    }
+    .btn-primary, .btn-outline {
+      padding: 0.8rem 1.8rem;
+      border-radius: 60px;
+      font-weight: 700;
+      font-size: 1rem;
+      border: 2px solid;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-primary {
+      background: #d46b8d;
+      border-color: #d46b8d;
+      color: white;
+      box-shadow: 0 8px 16px #fbc1d2;
+    }
+    .btn-outline {
+      background: transparent;
+      border-color: #d46b8d;
+      color: #d46b8d;
+    }
+    .hero-image img {
+      max-width: 280px;
+      border-radius: 40px;
+      box-shadow: 0 20px 20px -8px #f5b0c2;
+      border: 4px solid white;
+    }
+    /* produk */
+    .section-title {
+      font-size: 2rem;
+      text-align: center;
+      color: #c1597a;
+      margin-bottom: 0.5rem;
+    }
+    .section-sub {
+      text-align: center;
+      font-size: 1rem;
+      color: #9b6f7d;
+      margin-bottom: 2rem;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+    .product-card {
+      background: white;
+      border-radius: 32px;
+      padding: 1.5rem 0.5rem 1.5rem;
+      box-shadow: 0 12px 24px #fad4e1;
+      text-align: center;
+      border: 2px solid #fff2f7;
+    }
+    .product-img {
+      width: 130px;
+      height: 130px;
+      background: linear-gradient(145deg, #ffe7ee, #ffdae6);
+      border-radius: 50%;
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      border: 4px solid white;
+    }
+    .product-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 0.3rem;
+    }
+    .product-price {
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #d46b8d;
+      margin: 0.5rem 0;
+    }
+    .btn-small {
+      background: #f8cedc;
+      border: none;
+      padding: 0.5rem 1.5rem;
+      border-radius: 60px;
+      font-weight: 600;
+      color: #a14360;
+      cursor: pointer;
+    }
+    /* tentang */
+    .tentang {
+      background: #ffeef4;
+      border-radius: 40px 40px 0 0;
+      padding: 3rem 0;
+      margin-top: 2rem;
+    }
+    .tentang-flex {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      text-align: center;
+    }
+    @media (min-width: 768px) {
+      .tentang-flex { text-align: left; }
+    }
+    .tentang-text p {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .tentang-highlight {
+      background: white;
+      padding: 0.8rem 1.5rem;
+      border-radius: 60px;
+      display: inline-block;
+      font-weight: 600;
+    }
+    .tentang-img i {
+      font-size: 7rem;
+      color: #f69bb7;
+    }
+    /* footer */
+    footer {
+      background: #ffdee9;
+      padding: 2rem 0;
+      text-align: center;
+      border-top: 6px solid white;
+    }
+    .footer-ig a {
+      background: white;
+      padding: 0.5rem 1.5rem;
+      border-radius: 60px;
+      display: inline-block;
+      border: 2px solid #f7a6bd;
+    }
+    .small-note { font-size: 0.85rem; opacity: 0.8; }
+
+    @media (max-width: 480px) {
+      .navbar .container { flex-direction: column; }
+      .nav-links { flex-wrap: wrap; }
+      .logo { font-size: 1.3rem; }
+      .hero-text h1 { font-size: 2rem; }
+      .product-img { width: 110px; height: 110px; font-size: 3.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo"><i class="fa-solid fa-bouquet"></i><span>Buket.Cute</span></div>
+      <div class="ig-icon"><a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i> @buket.cute</a></div>
+      <div class="nav-links">
+        <a href="#" class="active">Beranda</a><a href="#">Produk</a><a href="#">Tentang</a><a href="#">Kontak</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-text">
+        <span class="highlight">🌸 handmade with love</span>
+        <h1>Buket manis untuk momen spesialmu</h1>
+        <p>Rangkaian bunga segar & estetik, dibuat dengan hati.</p>
+        <div class="ig-handle"><i class="fab fa-instagram"></i> @buket.cute</div>
+        <div class="btn-group">
+          <button class="btn-primary">Lihat Koleksi</button>
+          <button class="btn-outline">Pesan Custom</button>
+        </div>
+      </div>
+      <div class="hero-image"><img src="https://picsum.photos/id/306/300/300" alt="Buket"></div>
+    </div>
+  </section>
+
+  <!-- produk unggulan -->
+  <section class="container">
+    <h2 class="section-title">Bestie Picks 🌼</h2>
+    <div class="section-sub">Yang paling laris dan cocok buat hadiah</div>
+    <div class="product-grid">
+      <div class="product-card"><div class="product-img">🌹</div><h3>Mawar Merah</h3><div class="product-price">Rp135K</div><button class="btn-small">Pesan</button></div>
+      <div class="product-card"><div class="product-img">🌸</div><h3>Sakura Pink</h3><div class="product-price">Rp150K</div><button class="btn-small">Pesan</button></div>
+      <div class="product-card"><div class="product-img">🌻</div><h3>Matahari</h3><div class="product-price">Rp165K</div><button class="btn-small">Pesan</button></div>
+      <div class="product-card"><div class="product-img">💐</div><h3>Mixed Pastel</h3><div class="product-price">Rp180K</div><button class="btn-small">Pesan</button></div>
+    </div>
+  </section>
+
+  <!-- tentang -->
+  <section class="tentang">
+    <div class="container tentang-flex">
+      <div class="tentang-text">
+        <h2 class="section-title" style="text-align: left;">Tentang @buket.cute</h2>
+        <p>Kami adalah brand buket bunga lokal dengan sentuhan manis. Setiap buket dirakit dengan cinta.</p>
+        <p>🌸 Bunga cantik + 100% handmade<br>🎀 Bisa request custom</p>
+        <div class="tentang-highlight"><i class="fab fa-instagram"></i> @buket.cute — DM order!</div>
+      </div>
+      <div class="tentang-img"><i class="fa-solid fa-heart"></i></div>
+    </div>
+  </section>
+
+  <!-- footer -->
+  <footer>
+    <div class="container footer-content">
+      <div class="logo" style="justify-content: center;"> <i class="fa-solid fa-bouquet"></i> Buket.Cute</div>
+      <p>Bikin momenmu lebih manis dengan buket bunga estetik.</p>
+      <div class="footer-ig"><a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i> @buket.cute</a></div>
+      <p class="small-note">© 2025 Buket.Cute — all rights reserved</p>
+    </div>
+  </footer>
+</body>
+</html>

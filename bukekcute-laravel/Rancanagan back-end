@@ -1,0 +1,298 @@
+Berikut adalah perincian lengkap mengenai backend yang dibutuhkan untuk Sistem Informasi Pemesanan Toko Bucket Cutie, mencakup arsitektur, teknologi, modul-modul utama, serta integrasi dengan frontend dan WhatsApp.
+
+# A. Arsitektur Backend
+Sistem menggunakan arsitektur hybrid:
+
+Laravel (PHP 8.2+) sebagai backend utama untuk website dan REST API.
+
+Node.js (dengan library Baileys) sebagai service terpisah yang menangani koneksi WhatsApp, pengiriman/penerimaan pesan, dan parsing otomatis.
+
+MySQL sebagai database pusat yang diakses oleh kedua service.
+
+Redis (opsional) untuk queue, cache, dan manajemen session.
+
+Kedua service berkomunikasi melalui database dan bisa juga menggunakan event (misal: Laravel memicu job yang diolah Node.js, atau sebaliknya). Untuk kemudahan, kita bisa menggunakan pendekatan polling database atau message broker sederhana.
+
+B. Teknologi dan Tools Backend
+Komponen	Teknologi	Keterangan
+Framework Utama	Laravel 10	PHP framework dengan fitur lengkap (ORM, routing, auth, queue, dll).
+Database	MySQL 8.0 / MariaDB 10.6	Menyimpan semua data aplikasi.
+Cache & Queue	Redis	Untuk queue (pengolahan pesan, notifikasi) dan cache.
+WhatsApp Service	Node.js + Baileys	Library untuk koneksi ke WhatsApp Web, mengirim/menerima pesan.
+Process Manager	PM2	Menjaga Node.js service tetap berjalan di server.
+Background Jobs	Laravel Queue (database/redis)	Memproses tugas berat (misal: parsing pesan, notifikasi) secara async.
+API Documentation	Postman / Swagger	Dokumentasi endpoint untuk frontend dan integrasi.
+Authentication	Laravel Breeze / Sanctum	Untuk login admin, menggunakan token/session.
+File Storage	Laravel Filesystem	Menyimpan gambar produk dan media chat, bisa local atau cloud.
+; C. Modul Backend Berdasarkan Fitur
+; 1. Modul Autentikasi & Manajemen Admin
+; Login/Logout admin menggunakan email & password.
+
+; Middleware untuk melindungi rute admin.
+
+; Fitur "remember me" dan reset password (opsional).
+
+; Hanya satu level pengguna (admin), tidak ada role lain.
+
+; 2. Modul Manajemen Produk & Kategori
+; CRUD Produk: Menyimpan data produk (nama, slug, deskripsi, harga, stok, status aktif).
+
+; Upload Gambar: Menyimpan gambar produk ke storage, mencatat di tabel media (polimorfik).
+
+; CRUD Kategori: Untuk mengelompokkan produk.
+
+; Manajemen Stok Produk: Stok produk jadi bisa diupdate manual atau otomatis saat pesanan diproses.
+
+; 3. Modul Manajemen Bahan Baku (Ingredients)
+; CRUD Bahan: Nama, deskripsi, stok, satuan, batas minimal stok.
+
+; Komposisi Produk: Menentukan bahan apa saja yang dibutuhkan untuk membuat 1 unit produk (tabel product_ingredient).
+
+; Manajemen Stok Bahan:
+
+; Menambah stok melalui pembelian (tabel purchases & purchase_items).
+
+; Mengurangi stok saat pesanan diproses (baik produk jadi maupun custom).
+
+; Mencatat setiap pergerakan stok di tabel stock_movements untuk audit.
+
+; Notifikasi Stok Menipis: Saat stok bahan <= min_stock, sistem bisa mengirim notifikasi ke admin (via dashboard atau WhatsApp).
+
+; 4. Modul Pemesanan (Orders)
+; Membuat Pesanan:
+
+; Dari website: pelanggan klik tombol WA → diarahkan ke WhatsApp, pesanan belum tercatat di sistem sampai WA parser memprosesnya.
+
+; Dari WhatsApp: parser membaca pesan masuk, mengenali intent, lalu membuat order.
+
+; Struktur Order:
+
+; Order memiliki status: pending (baru masuk), processed (diproses), completed (selesai), cancelled (dibatalkan).
+
+; Order items: bisa berupa produk (dengan product_id) atau custom (product_id = null, custom_description diisi).
+
+; Menghitung Total Harga: Dari jumlah item, atau bisa diisi manual untuk custom.
+
+; 5. Modul Parser WhatsApp (Node.js + Laravel Queue)
+; Service Node.js:
+
+; Menjaga koneksi WhatsApp tetap aktif.
+
+; Menerima pesan masuk, menyimpan ke tabel messages.
+
+; Untuk pesan teks, setelah disimpan, bisa langsung memicu event atau menambahkan job ke queue (via Redis/database) agar diproses oleh Laravel.
+
+; Alternatif: Node.js sendiri melakukan parsing sederhana, lalu membuat order langsung. Namun lebih baik parsing dilakukan di Laravel agar kode lebih terstruktur dan memanfaatkan model Eloquent.
+
+; Parser di Laravel:
+
+; Job/command membaca pesan dengan parsed = false secara periodik (cron) atau via queue.
+
+; Menganalisis teks untuk mengekstrak: nama produk, jumlah, alamat, dll. Bisa menggunakan regex sederhana atau NLP ringan.
+
+; Jika sukses: buat/update customer, buat order, buat order items, kaitkan dengan pesan.
+
+; Jika gagal: bisa mengirim balasan otomatis meminta klarifikasi.
+
+; Setelah diproses, tandai parsed = true.
+
+; 6. Modul WhatsApp
+; membuat sebuah parsing dengan kata kunci "pesan" untuk memudahkan parser mengenali bahwa pesan tersebut adalah pesan order, dan untuk memudahkan pelanggan dalam membuat pesan order.
+; Contoh format pesan yang bisa dikenali:
+; Halo saya ingin memesan [NamaProduk] sebanyak [jumlah] untuk alamat [alamat lengkap].
+; Parser akan mengekstrak nama produk, jumlah, dan alamat dari pesan tersebut. Jika format tidak sesuai, parsing  akan mengirimkan pesan balasan oto matis meminta klarifikasi.
+; Pelanggan:
+
+; Saat order dibuat (konfirmasi penerimaan).
+
+; Saat status order berubah (diproses, selesai, dikirim).
+; .
+
+; Notifikasi ke Admin:
+; bisa kirim chat lewat web atau pun di wa yang akan secara oto matis masuk ke fitur chat dan fitur chat nya satu chat satu pelanggan  jadi kaya wa tapi di sesuai kan untuk website ini 
+; Ada pesanan baru.
+
+; Stok bahan menipis.
+
+; Ada pesan dari pelanggan yang perlu perhatian (misal: pertanyaan).
+
+; Mekanisme: Laravel menambahkan job ke queue, kemudian Node.js (atau job terpisah) mengirim pesan via WhatsApp. Bisa juga Node.js yang listen ke tabel outgoing_messages atau menggunakan event.
+
+; 7. Modul Chat / Riwayat Pesan
+; Menyimpan semua pesan masuk/keluar di tabel messages.
+
+; Menampilkan riwayat chat per pelanggan di dashboard admin.
+
+; Memungkinkan admin untuk membalas dari dashboard (dengan mengisi form, lalu backend mengirim via Node.js).
+
+; 8. Modul Media
+; Menangani upload gambar produk, gambar dari chat, dll.
+
+; Menggunakan polimorfik media agar fleksibel.
+
+; Menyediakan endpoint untuk mengambil gambar (URL).
+
+9. Modul Laporan
+Laporan Penjualan: Filter tanggal, tampilkan total pendapatan, jumlah order, rincian per produk (termasuk custom), bisa export Excel/PDF.
+
+Laporan Stok: Stok bahan saat ini, histori pergerakan stok, rekap pembelian.
+
+Laporan Chat/Riwayat (opsional).
+
+10. Modul Pengaturan Toko
+Menyimpan konfigurasi: nama toko, alamat, nomor WhatsApp, logo, dll. Bisa di tabel settings (key-value).
+
+Juga pengaturan koneksi WhatsApp (misal: status koneksi, QR code untuk scan ulang).
+
+D. API Endpoints (untuk Frontend)
+Frontend (Laravel Blade) akan berkomunikasi dengan backend melalui controller langsung (bukan API terpisah) karena kita menggunakan monolit Laravel. Namun jika ingin memisahkan frontend (misal SPA), kita perlu REST API. Untuk proyek ini, pendekatan Blade sudah cukup.
+
+Beberapa endpoint yang mungkin dibutuhkan untuk AJAX (misal filter produk, load more, dll):
+
+GET /api/products – daftar produk (bisa dengan filter kategori, search, pagination).
+
+GET /api/products/{slug} – detail produk.
+
+GET /api/categories – daftar kategori.
+
+POST /api/contact – mengirim pesan dari form kontak (jika ada).
+
+Untuk admin, semua rute berada di bawah prefix /admin dan dilindungi middleware auth.
+
+E. Struktur Direktori Laravel (Modul)
+text
+app/
+├── Models/
+│   ├── User.php
+│   ├── Customer.php
+│   ├── Category.php
+│   ├── Product.php
+│   ├── Ingredient.php
+│   ├── ProductIngredient.php (pivot)
+│   ├── Order.php
+│   ├── OrderItem.php
+│   ├── OrderItemIngredient.php
+│   ├── Message.php
+│   ├── Media.php
+│   ├── StockMovement.php
+│   ├── Purchase.php
+│   └── PurchaseItem.php
+├── Http/
+│   ├── Controllers/
+│   │   ├── Public/
+│   │   │   ├── HomeController.php
+│   │   │   ├── CatalogController.php
+│   │   │   └── ContactController.php
+│   │   ├── Admin/
+│   │   │   ├── DashboardController.php
+│   │   │   ├── ProductController.php
+│   │   │   ├── CategoryController.php
+│   │   │   ├── IngredientController.php
+│   │   │   ├── OrderController.php
+│   │   │   ├── MessageController.php
+│   │   │   ├── ReportController.php
+│   │   │   └── SettingController.php
+│   │   └── Api/ (opsional)
+│   ├── Middleware/
+│   └── Requests/ (form requests)
+├── Jobs/
+│   ├── ProcessIncomingMessage.php
+│   ├── SendWhatsAppNotification.php
+│   └── CheckLowStock.php
+├── Console/
+│   └── Commands/
+│       ├── ParseMessages.php (jika pakai cron)
+│       └── CheckWhatsAppConnection.php
+├── Services/
+│   ├── WhatsAppService.php (interface ke Node.js)
+│   ├── ParserService.php
+│   └── StockService.php
+└── ...
+F. Integrasi Laravel dengan Node.js WhatsApp Service
+Ada beberapa cara komunikasi:
+
+Database Polling (sederhana):
+
+Node.js menulis pesan masuk ke tabel messages.
+
+Laravel memiliki cron/queue yang secara periodik membaca pesan baru dan memprosesnya.
+
+Laravel menulis pesan keluar ke tabel outgoing_messages (atau tabel messages dengan flag is_incoming=false), Node.js membaca dan mengirim.
+
+Kelemahan: delay, tetapi cukup untuk skala kecil.
+
+Redis Pub/Sub (lebih real-time):
+
+Node.js publish event "message.received" ke Redis channel.
+
+Laravel subscribe (via Redis) dan langsung proses.
+
+Untuk pengiriman, Laravel publish ke channel "message.send", Node.js subscribe.
+
+Membutuhkan Redis dan konfigurasi.
+
+HTTP Callback:
+
+Node.js memanggil endpoint API Laravel setiap kali ada pesan masuk.
+
+Laravel memanggil endpoint Node.js untuk mengirim pesan.
+
+Sederhana, tapi perlu memastikan keamanan (token).
+
+Untuk kemudahan, kita bisa mulai dengan database polling karena mudah diimplementasikan dan tidak memerlukan komponen tambahan. Jika di masa depan perlu real-time, bisa ditingkatkan.
+
+G. Background Jobs (Laravel Queue)
+Beberapa tugas yang perlu dijalankan secara async:
+
+Memproses pesan masuk (parsing) – agar tidak menghambat request.
+
+Mengirim notifikasi WhatsApp – karena bisa memakan waktu.
+
+Mengupdate stok saat order diproses.
+
+Membuat laporan (jika berat).
+
+Gunakan Redis sebagai driver queue, dengan supervisor untuk menjaga worker tetap jalan.
+
+H. Keamanan Backend
+Admin routes dilindungi middleware auth.
+
+Validasi input di semua form menggunakan Form Request.
+
+Sanitasi data untuk menghindari XSS.
+
+CSRF protection (aktif default di Laravel).
+
+Rate limiting untuk endpoint publik (misal kontak).
+
+Enkripsi data sensitif (password sudah otomatis).
+
+CORS jika ada API eksternal.
+
+I. Deployment
+Server: VPS (DigitalOcean, Linode, atau lokal).
+
+Web Server: Nginx + PHP-FPM.
+
+Node.js: Dijalankan dengan PM2.
+
+Database: MySQL.
+
+Redis: Untuk queue dan cache.
+
+SSL: Let's Encrypt untuk HTTPS.
+
+Kesimpulan
+Backend sistem ini membutuhkan:
+
+Laravel untuk logika bisnis, database, admin panel, dan API.
+
+Node.js + Baileys untuk integrasi WhatsApp.
+
+MySQL sebagai database.
+
+Redis untuk queue (opsional tapi direkomendasikan).
+
+Komunikasi antar service via database polling atau Redis.
+
+Dengan pembagian modul yang jelas dan penggunaan queue, sistem akan mampu menangani pemesanan otomatis, pengelolaan stok, dan notifikasi dengan baik.

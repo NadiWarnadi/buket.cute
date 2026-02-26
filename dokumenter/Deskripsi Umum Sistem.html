@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Diagram Sistem Toko Bucket Cutie</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            background: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .diagram-wrapper {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 24px;
+            max-width: 1000px;
+            width: fit-content;
+        }
+        h3 {
+            text-align: center;
+            margin-top: 0;
+            color: #1e293b;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="diagram-wrapper">
+        <h3>Diagram Sistem Informasi Pemesanan Toko Bucket Cutie</h3>
+        <pre class="mermaid">
+            flowchart TB
+                subgraph Pengguna
+                    P(Pengunjung Publik)
+                    A(Admin)
+                end
+
+                subgraph Laravel_App [Aplikasi Laravel 12 - MVC]
+                    direction TB
+                    FE(Front-end<br>Halaman publik)
+                    BE(Back-end<br>Area admin)
+
+                    subgraph MVC
+                        C(Controller)
+                        M(Model)
+                        V(View)
+                    end
+
+                    DB[(Database<br>produk, pesanan, admin)]
+                end
+
+                subgraph Integrasi
+                    WA[WhatsApp]
+                    Node[Node.js<br>Webhook Receiver]
+                end
+
+                P -->|Melihat katalog, detail| FE
+                P -->|Klik Pesan WA| WA
+                WA -->|Webhook| Node
+                Node -->|POST /api/pesanan| C
+                C --> M
+                M --> DB
+
+                A -->|Login| BE
+                BE --> C
+                C --> M
+                M --> DB
+                DB -->|Data pesanan, stok| BE
+                BE -->|Update status| C
+
+                style P fill:#e6f7ff,stroke:#1890ff
+                style A fill:#fff2e8,stroke:#fa8c16
+                style WA fill:#e8f5e9,stroke:#2e7d32
+                style Node fill:#f1f8e9,stroke:#558b2f
+                style DB fill:#f9f9f9,stroke:#595959,stroke-width:2px
+        </pre>
+    </div>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                'background': '#ffffff',
+                'primaryColor': '#f0f0f0',
+                'primaryBorderColor': '#a0a0a0',
+                'lineColor': '#333333',
+                'fontFamily': 'arial'
+            },
+            flowchart: { useMaxWidth: true, htmlLabels: true }
+        });
+    </script>
+</body>
+</html>

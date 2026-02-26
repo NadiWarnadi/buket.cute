@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Kontak • Buket.Cute</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* GLOBAL & NAVBAR (sama) */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Quicksand', sans-serif; background: #fffafc; color: #4a3f45; }
+    .container { width: 90%; max-width: 1200px; margin: 0 auto; }
+    .navbar {
+      background: #ffffffd9; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(252,176,196,0.15); padding: 1rem 0; position: sticky; top: 0; z-index: 100;
+      border-bottom: 2px solid #ffe2eb;
+    }
+    .navbar .container {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.5rem; font-weight: 700; color: #d46b8d; }
+    .logo i { font-size: 1.8rem; color: #f8a5b2; }
+    .nav-links {
+      display: flex; gap: 1.2rem; font-weight: 600; font-size: 1rem; order: 3;
+      width: 100%; justify-content: center; margin-top: 0.5rem; flex-wrap: wrap;
+    }
+    .nav-links a {
+      color: #5e4b54; transition: 0.2s; border-bottom: 2px solid transparent; padding-bottom: 4px;
+    }
+    .nav-links a:hover, .nav-links a.active { color: #d46b8d; border-bottom-color: #f8a5b2; }
+    .ig-icon a {
+      background: linear-gradient(135deg, #f9cee2, #f8b3c6); padding: 0.5rem 1rem; border-radius: 40px;
+      display: flex; align-items: center; gap: 6px; color: white; font-weight: 600; font-size: 0.9rem;
+      box-shadow: 0 6px 12px #fcd1df; white-space: nowrap;
+    }
+    /* KHUSUS KONTAK */
+    .page-header {
+      background: linear-gradient(145deg, #ffe4ed, #ffd6e4);
+      padding: 2rem 0 2.5rem; text-align: center; border-radius: 0 0 40px 40px; margin-bottom: 2rem;
+    }
+    .page-header h1 { font-size: 2.2rem; color: #b94e6b; }
+    .contact-grid {
+      display: flex; flex-wrap: wrap; gap: 3rem; margin: 3rem 0;
+    }
+    .contact-info {
+      flex: 1 1 300px;
+      background: white; border-radius: 40px; padding: 2rem; box-shadow: 0 15px 30px #fad4e1;
+    }
+    .contact-info h3 { color: #c1597a; margin-bottom: 1.5rem; font-size: 1.5rem; }
+    .info-item {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .info-item i {
+      width: 40px; height: 40px; background: #ffe7ee; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; color: #d46b8d; font-size: 1.2rem;
+    }
+    .info-item p { font-size: 1.1rem; }
+    .social-links {
+      display: flex; gap: 1rem; margin-top: 2rem; justify-content: center;
+    }
+    .social-links a {
+      width: 50px; height: 50px; background: #ffe7ee; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; color: #d46b8d; font-size: 1.5rem;
+      transition: 0.2s;
+    }
+    .social-links a:hover { background: #f8cedc; transform: scale(1.1); }
+    .contact-form {
+      flex: 2 1 400px;
+      background: white; border-radius: 40px; padding: 2rem; box-shadow: 0 15px 30px #fad4e1;
+    }
+    .contact-form h3 { color: #c1597a; margin-bottom: 1.5rem; font-size: 1.5rem; }
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 1rem; border: 2px solid #ffe2eb; border-radius: 30px;
+      font-family: 'Quicksand', sans-serif; font-size: 1rem; outline: none;
+    }
+    .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #f8a5b2; }
+    .btn-submit {
+      background: #d46b8d; color: white; border: none; padding: 1rem 2.5rem;
+      border-radius: 60px; font-weight: 700; font-size: 1.1rem; cursor: pointer;
+      box-shadow: 0 8px 16px #fbc1d2; transition: 0.2s;
+    }
+    .btn-submit:hover { background: #c25a7b; }
+    .map-placeholder {
+      background: #ffeef4; border-radius: 40px; padding: 2rem; text-align: center; margin: 2rem 0;
+    }
+    /* FOOTER */
+    footer {
+      background: #ffdee9; padding: 2rem 0; text-align: center; border-top: 6px solid white;
+    }
+    .footer-ig a {
+      background: white; padding: 0.5rem 1.5rem; border-radius: 60px; display: inline-block;
+      border: 2px solid #f7a6bd;
+    }
+    .small-note { font-size: 0.85rem; opacity: 0.8; }
+    @media (max-width: 480px) {
+      .navbar .container { flex-direction: column; }
+      .logo { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="container">
+      <div class="logo"><i class="fa-solid fa-bouquet"></i><span>Buket.Cute</span></div>
+      <div class="ig-icon"><a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i> @buket.cute</a></div>
+      <div class="nav-links">
+        <a href="index.html">Beranda</a>
+        <a href="katalog.html">Katalog</a>
+        <a href="tentang.html">Tentang</a>
+        <a href="kontak.html" class="active">Kontak</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="container">
+      <h1>📬 Hubungi Kami</h1>
+      <p>Senang mendengar dari kamu! DM atau isi form di bawah</p>
+    </div>
+  </div>
+
+  <!-- KONTAK GRID -->
+  <div class="container contact-grid">
+    <!-- Info Kontak -->
+    <div class="contact-info">
+      <h3>📍 Info Kontak</h3>
+      <div class="info-item">
+        <i class="fab fa-instagram"></i>
+        <p><strong>@buket.cute</strong> (DM untuk respon cepat)</p>
+      </div>
+      <div class="info-item">
+        <i class="fab fa-whatsapp"></i>
+        <p>+62 812-3456-7890</p>
+      </div>
+      <div class="info-item">
+        <i class="fa-regular fa-envelope"></i>
+        <p>hello@buketcute.id</p>
+      </div>
+      <div class="info-item">
+        <i class="fa-regular fa-clock"></i>
+        <p>Setiap hari: 08.00 - 20.00 WIB</p>
+      </div>
+      <div class="social-links">
+        <a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i></a>
+        <a href="#"><i class="fab fa-tiktok"></i></a>
+        <a href="#"><i class="fab fa-whatsapp"></i></a>
+      </div>
+    </div>
+
+    <!-- Form Pesan -->
+    <div class="contact-form">
+      <h3>✉️ Kirim Pesan</h3>
+      <form id="contactForm" onsubmit="event.preventDefault(); alert('Pesan terkirim (demo)');">
+        <div class="form-group">
+          <input type="text" placeholder="Nama kamu" required>
+        </div>
+        <div class="form-group">
+          <input type="email" placeholder="Email (opsional)">
+        </div>
+        <div class="form-group">
+          <input type="text" placeholder="Nomor WhatsApp" required>
+        </div>
+        <div class="form-group">
+          <textarea placeholder="Tulis pesan atau request buket..."></textarea>
+        </div>
+        <button type="submit" class="btn-submit">Kirim Pesan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- PETA (simulasi) -->
+  <div class="container map-placeholder">
+    <i class="fa-solid fa-map-location-dot" style="font-size: 3rem; color: #d46b8d; margin-bottom: 1rem;"></i>
+    <p style="font-size: 1.1rem;">📍 Workshop: Jl. Bunga No. 12, Indramayu (dengan janji temu)</p>
+    <p style="opacity: 0.7;">*Pengiriman ke seluruh indramayu</p>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container footer-content">
+      <div class="logo" style="justify-content: center;"><i class="fa-solid fa-bouquet"></i> Buket.Cute</div>
+      <p>Bikin momenmu lebih manis dengan buket bunga estetik.</p>
+      <div class="footer-ig"><a href="https://instagram.com/buket.cute" target="_blank"><i class="fab fa-instagram"></i> @buket.cute</a></div>
+      <p class="small-note">© 2026 Buket.Cute — all rights reserved</p>
+    </div>
+  </footer>
+</body>
+</html>
