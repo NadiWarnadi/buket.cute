@@ -35,8 +35,12 @@ class ProcessChatbotReply implements ShouldQueue
 
             if ($outgoing) {
                 Log::info("✅ Auto-reply sent to customer {$this->message->customer_id}: {$outgoing->id}");
+                // Mark as parsed
+                $this->message->update(['parsed' => true]);
             } else {
                 Log::debug("No auto-reply needed for message {$this->message->id}");
+                // Still mark as processed to prevent duplicate handling
+                $this->message->update(['parsed' => true]);
             }
         } catch (\Exception $e) {
             Log::error("Error processing chatbot reply: {$e->getMessage()}");

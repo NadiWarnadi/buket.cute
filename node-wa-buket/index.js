@@ -45,6 +45,10 @@ if (!fs.existsSync('./logs')) {
 // Session path for wa-bailey
 const sessionPath = path.join(__dirname, 'session');
 
+// Track messages already sent to Laravel to prevent duplicates
+const sentMessages = new Set();
+const MESSAGE_CACHE_TTL = 60000; // 1 minute
+
 // Initialize WhatsApp client
 let sock = null;
 let isConnected = false;
@@ -116,83 +120,6 @@ async function initializeWhatsApp() {
     }
 }
 
-// async function initializeWhatsApp() {
-//     logger.info('🚀 Initializing WhatsApp connection...');
-
-//     const { version, isLatest } = await fetchLatestBaileysVersion();
-//     logger.info(`Baileys Version: ${version}, Is Latest: ${isLatest}`);
-
-//     // const { state, saveCreds } = await makeWASocket.useSingleFileLock(
-//     //     path.join(sessionPath, 'creds.json')
-//     // );
-//     // Pakai ini untuk menyimpan login di folder 'auth_info'
-// const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-
-// const sock = makeWASocket({
-//     auth: state,
-//     printQRInTerminal: true, // Supaya muncul QR-nya
-//     logger: logger,
-//     // ... settingan lainnya biarkan saja
-// });
-//     // Tambahkan ini di bawahnya supaya sesi tersimpan otomatis
-// sock.ev.on('creds.update', saveCreds);
-//     sock = makeWASocket({
-//         version,
-//         logger: pino({ level: 'silent' }),
-//         printQRInTerminal: true,
-//         auth: state,
-//         msgRetryCounterMap: {},
-//         defaultQueryTimeoutMs: 60000,
-//         shouldIgnoreJid: (jid) => isJidBroadcast(jid),
-//     });
-
-//     // Save credentials whenever they're updated
-//     sock.ev.on('creds.update', saveCreds);
-
-//     // Connection update
-//     sock.ev.on('connection.update', async (update) => {
-//         const { connection, lastDisconnect, qr } = update;
-
-//         if (qr) {
-//             logger.info('📱 Scan QR Code dengan WhatsApp kamu untuk login');
-//         }
-
-//         if (connection === 'open') {
-//             isConnected = true;
-//             logger.info('✅ WhatsApp Connected!');
-//             logger.info(`Bot Number: ${sock.user.id}`);
-//         } else if (connection === 'close') {
-//             isConnected = false;
-//             const statusCode = lastDisconnect?.error?.output?.statusCode || 500;
-
-//             // Reconnect if disconnected unexpectedly
-//             if (statusCode !== LogoutUser) {
-//                 logger.info('🔄 Reconnecting...');
-//                 await new Promise((resolve) => setTimeout(resolve, 3000));
-//                 initializeWhatsApp();
-//             } else {
-//                 logger.info('❌ WhatsApp logged out');
-//             }
-//         }
-//     });
-
-//     // Listen for incoming messages
-//     sock.ev.on('messages.upsert', async (m) => {
-//         await handleIncomingMessage(m);
-//     });
-
-//     // Listen for message status updates
-//     sock.ev.on('message.update', async (m) => {
-//         for (const { key, update } of m) {
-//             if (update.status) {
-//                 logger.debug(`Message status update: ${key.id} -> ${update.status}`);
-//             }
-//         }
-//     });
-
-//     logger.info('✨ WhatsApp client initialized successfully');
-// }
-
 /**
  * Handle incoming messages
  */
@@ -202,6 +129,21 @@ async function handleIncomingMessage(m) {
     for (const msg of m.messages) {
         try {
             if (msg.key.fromMe || isJidBroadcast(msg.key.remoteJid)) continue;
+
+            // SKIP DUPLICATE - Don't process same message_id twice
+            if (sentMessages.has(msg.key.id)) {
+                logger.debug(`⏭️ Skipping duplicate message: ${msg.key.id}`);
+                continue;
+            }
+
+            // Extract message text FIRST
+            const messageText = getMessageText(msg.message);
+            
+            // SKIP if no text (avoid sending empty body to Laravel)
+            if (!messageText || messageText.trim() === '' || messageText === '[Message]') {
+                logger.debug(`⏭️ Skipping message without text: ${msg.key.id}`);
+                continue;
+            }
 
             // 🔍 Extract phone dari senderPn (nomor asli WhatsApp)
             let cleanNumber = null;
@@ -234,15 +176,19 @@ async function handleIncomingMessage(m) {
                 continue;
             }
 
+            // Unix timestamp (seconds, not milliseconds)
+            const unixTimestamp = Math.floor(msg.messageTimestamp);
+
             const messageData = {
                 message_id: msg.key.id,
                 from: cleanNumber,
-                timestamp: new Date(msg.messageTimestamp * 1000),
-                body: getMessageText(msg.message),
+                timestamp: unixTimestamp,  // Send as unix timestamp (numeric)
+                body: messageText,  // Already validated above
                 type: getMessageType(msg.message),
                 is_incoming: !msg.key.fromMe,
             };
 
+            logger.debug('Message data to send:', JSON.stringify(messageData, null, 2));
 
             // Extract media information if present
             const mediaInfo = await extractMediaInfo(msg.message, sock, logger);
@@ -256,6 +202,14 @@ async function handleIncomingMessage(m) {
             if (process.env.AUTO_READ_MESSAGE !== 'true') {
                 logger.debug(`Received message (not marking as read): ${messageData.message_id}`);
             }
+
+            // MARK AS SENT BEFORE ASYNC CALL to prevent race condition
+            sentMessages.add(msg.key.id);
+            
+            // Clean up old entries from memory (keep only last 1 minute)
+            setTimeout(() => {
+                sentMessages.delete(msg.key.id);
+            }, MESSAGE_CACHE_TTL);
 
             // Send to Laravel API for storage
             await sendMessageToLaravel(messageData);
@@ -481,14 +435,25 @@ async function sendMessageToLaravel(messageData) {
             return response.data;
         }
     } catch (error) {
-        if (error.response?.status === 404) {
+        if (error.response?.status === 422) {
+            logger.error(`❌ Validation error (422) sending message to Laravel`, {
+                errors: error.response?.data?.errors,
+                message: error.response?.data?.message,
+                messageData: messageData,
+            });
+        } else if (error.response?.status === 404) {
             logger.warn(
                 `Laravel API endpoint not found. Ensure Laravel server is running with API routes.`
             );
+        } else if (error.response?.status === 401) {
+            logger.error(`❌ Unauthorized (401) - Check LARAVEL_BOT_TOKEN`);
         } else if (error.code === 'ECONNREFUSED') {
             logger.warn(`Cannot connect to Laravel API at ${process.env.LARAVEL_API_URL}`);
         } else {
-            logger.error(`Error sending message to Laravel: ${error.message}`);
+            logger.error(`Error sending message to Laravel: ${error.message}`, {
+                status: error.response?.status,
+                data: error.response?.data,
+            });
         }
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\OrderSession;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
@@ -211,5 +212,138 @@ class OrderController extends Controller
 
         $order->update(['status' => $validated['status']]);
         return back()->with('success', 'Status pesanan diperbarui');
+    }
+
+    /**
+     * Confirm order from chat conversation
+     * Called when admin clicks "KONFIRMASI PESANAN" button in chat interface
+     */
+    public function confirmFromChat(Customer $customer, OrderSession $orderSession)
+    {
+        // Validate order session belongs to this customer and is active
+        if ($orderSession->customer_id !== $customer->id) {
+            return back()->with('error', 'Order session tidak sesuai');
+        }
+
+        // Validate all required fields are complete
+        if (!$orderSession->isComplete()) {
+            $missing = implode(', ', $orderSession->getMissingFields());
+            return back()->with('error', "Data tidak lengkap. Lengkapi: $missing");
+        }
+
+        try {
+            // Create Order from OrderSession
+            $order = Order::create([
+                'customer_id' => $customer->id,
+                'status' => Order::STATUS_PENDING,
+                'notes' => $this->buildOrderNotes($orderSession),
+            ]);
+
+            // Create OrderItem with custom description
+            OrderItem::create([
+                'order_id' => $order->id,
+                'custom_description' => $orderSession->product_description,
+                'quantity' => 1,
+                'price' => 0, // Admin akan set harga
+            ]);
+
+            // Update order session status
+            $orderSession->update([
+                'status' => OrderSession::STATUS_CONFIRMED,
+                'conversation_step' => OrderSession::STEP_COMPLETED,
+            ]);
+
+            // Send confirmation message to customer via WhatsApp
+            $this->sendConfirmationMessage($customer, $order);
+
+            return back()->with('success', 'Pesanan berhasil dibuat! Order #' . $order->id);
+        } catch (\Exception $e) {
+            \Log::error('Error confirming order from chat', [
+                'customer_id' => $customer->id,
+                'session_id' => $orderSession->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Gagal membuat pesanan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Build order notes from session data
+     */
+    private function buildOrderNotes(OrderSession $orderSession): string
+    {
+        $notes = [];
+
+        if ($orderSession->customer_name) {
+            $notes[] = "Nama: {$orderSession->customer_name}";
+        }
+
+        if ($orderSession->customer_address) {
+            $notes[] = "Alamat: {$orderSession->customer_address}";
+        }
+
+        if ($orderSession->product_description) {
+            $notes[] = "Pesanan: {$orderSession->product_description}";
+        }
+
+        if ($orderSession->reference_image_url) {
+            $notes[] = "Referensi gambar: {$orderSession->reference_image_url}";
+        }
+
+        $deliveryText = ($orderSession->delivery_type === 'delivery') ? 'Pengiriman' : 'Ambil di Toko';
+        $notes[] = "Pengiriman: $deliveryText";
+
+        if ($orderSession->greeting_note) {
+            $notes[] = "Kartu Ucapan: {$orderSession->greeting_note}";
+        }
+
+        return implode("\n", $notes);
+    }
+
+    /**
+     * Send confirmation message to customer
+     */
+    private function sendConfirmationMessage(Customer $customer, Order $order)
+    {
+        try {
+            $message = <<<'EOT'
+🎉 *Pesanan Dikonfirmasi!* 🎉
+
+Terima kasih telah mempercayai Buket Cute! 
+
+📋 *Nomor Pesanan: #{{order_id}}*
+
+Admin kami akan segera:
+✓ Menghubungi untuk detail pengiriman
+✓ Menentukan harga akhir
+✓ Melakukan produksi & desain buket
+
+Silakan tunggu notifikasi dari admin! 📲
+
+Terima kasih! 🌸
+EOT;
+
+            $message = str_replace('{{order_id}}', $order->id, $message);
+
+            // Create outgoing message
+            \App\Models\OutgoingMessage::create([
+                'customer_id' => $customer->id,
+                'to' => $customer->getWhatsAppNumber(),
+                'body' => $message,
+                'type' => \App\Models\OutgoingMessage::TYPE_TEXT,
+                'status' => \App\Models\OutgoingMessage::STATUS_PENDING,
+            ]);
+
+            // Dispatch job to send
+            \App\Jobs\SendWhatsAppNotification::dispatch(
+                \App\Models\OutgoingMessage::where('customer_id', $customer->id)->latest()->first()
+            );
+        } catch (\Exception $e) {
+            \Log::error('Error sending confirmation message', [
+                'error' => $e->getMessage(),
+                'order_id' => $order->id,
+            ]);
+        }
     }
 }

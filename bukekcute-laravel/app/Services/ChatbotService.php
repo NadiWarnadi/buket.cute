@@ -17,13 +17,26 @@ class ChatbotService
         $customer = $message->customer;
         $body = strtolower(trim($message->body));
 
-        // Only reply to incoming messages
+        // Only reply to incoming messages from customer
         if (!$message->is_incoming) {
             return null;
         }
 
-        // Get or create auto-reply
-        $reply = self::getAutoReply($body, $customer);
+        // Prevent replying to bot's own messages
+        if (strtolower($message->from) === 'bot' || $message->from === 'bot@whatsapp') {
+            return null;
+        }
+
+        // Already replied?
+        if ($message->parsed) {
+            return null;
+        }
+
+        // Extract customer name if message contains name info
+        self::extractAndUpdateCustomerName($customer, $message->body);
+
+        // Get or create auto-reply for general inquiries
+        $reply = self::getAutoReply($body, $customer, $message);
 
         if ($reply) {
             return self::sendAutoReply($customer, $reply);
@@ -33,45 +46,129 @@ class ChatbotService
     }
 
     /**
+     * Try to extract customer name from message
+     * E.g: "Halo nama saya Nadi" or "Saya Nadi" -> extract name
+     */
+    private static function extractAndUpdateCustomerName(Customer $customer, string $body)
+    {
+        // Pattern 1: "nama saya XYZ" or "nama aku XYZ"
+        if (preg_match('/nama\s+(?:saya|aku)\s+([a-zA-Z\s]+?)(?:\s|$)/i', $body, $matches)) {
+            $name = trim($matches[1]);
+            if (strlen($name) > 1 && strlen($name) < 50) {
+                $customer->update(['name' => $name]);
+                \Log::info("📝 Customer name updated: $name");
+            }
+        }
+        // Pattern 2: "saya XYZ" (at beginning)
+        elseif (preg_match('/^saya\s+([a-zA-Z\s]+?)(?:\s|$)/i', $body, $matches)) {
+            $name = trim($matches[1]);
+            if (strlen($name) > 1 && strlen($name) < 50) {
+                $customer->update(['name' => $name]);
+                \Log::info("📝 Customer name updated: $name");
+            }
+        }
+        // Pattern 3: "Ini XYZ" / "nama ku XYZ"
+        elseif (preg_match('/(?:ini|nama\s+ku|aku)\s+([a-zA-Z\s]+?)(?:\s|$)/i', $body, $matches)) {
+            $name = trim($matches[1]);
+            if (strlen($name) > 1 && strlen($name) < 50) {
+                $customer->update(['name' => $name]);
+                \Log::info("📝 Customer name updated: $name");
+            }
+        }
+    }
+
+    /**
      * Determine auto-reply based on message content
      */
-    private static function getAutoReply(string $messageBody, Customer $customer): ?string
+    private static function getAutoReply(string $messageBody, Customer $customer, Message $message): ?string
     {
-        // Greeting/Sales Opening - offer product info
-        if (self::containsKeywords($messageBody, ['halo', 'hi', 'hey', 'p', 'pagi', 'siang', 'malam', 'alo', 'permisi', 'assalamu', 'hm'])) {
+        // Greeting/Sales Opening
+        if (self::containsKeywords($messageBody, ['halo', 'hi', 'hey', 'p', 'pagi', 'siang', 'malam', 'alo', 'permisi', 'assalamu', 'hm', 'assalamualaikum'])) {
             return self::getGreetingReply($customer);
         }
 
-        // Ask about products/katalog
-        if (self::containsKeywords($messageBody, ['produk', 'katalog', 'menu', 'apa aja', 'pilihan', 'harga', 'berapa', 'diskon', 'promo'])) {
+        // Ask about products
+        if (self::containsKeywords($messageBody, ['produk', 'katalog', 'menu', 'apa aja', 'harga', 'berapa', 'jenis', 'pilihan'])) {
             return self::getProductReply();
         }
 
-        // Ask about delivery/shipping
-        if (self::containsKeywords($messageBody, ['pengiriman', 'ongkir', 'biaya kirim', 'berapa hari', 'sampai', 'dikirim', 'deliver'])) {
+        // Pesan buket - ask delivery method
+        if (self::containsKeywords($messageBody, ['pesan', 'order', 'beli', 'ingin', 'mau', 'butuh', 'belis'])) {
+            return self::getDeliveryMethodQuestion();
+        }
+
+        // Pickup answer
+        if (self::containsKeywords($messageBody, ['ambil', 'pickup', 'toko', 'datang', 'ke toko'])) {
+            return "✅ Baik! Anda ingin ambil di toko.\n\n⏰ Jam Buka: Senin-Minggu 10:00-18:00\n📍 Lokasi: Jl. Sudirman No. 123, Jakarta\n\nKapan Anda ingin ambil? Silakan sebutkan tanggal & jam 📅";
+        }
+
+        // Shipping/Delivery answer
+        if (self::containsKeywords($messageBody, ['kirim', 'delivery', 'dikirim', 'ongkir', 'ongkos kirim', 'pengiriman'])) {
             return self::getShippingReply();
         }
 
-        // Ask about status - order tracking
-        if (self::containsKeywords($messageBody, ['status', 'track', 'cek pesanan', 'kapan ready', 'besok', 'selesai', 'jadi', 'pesan saya'])) {
+        // Status/Tracking
+        if (self::containsKeywords($messageBody, ['status', 'track', 'pesanan', 'cek', 'kapan selesai', 'ready'])) {
             return self::getStatusAskReply($customer);
         }
 
-        // Thank you / Confirmation
-        if (self::containsKeywords($messageBody, ['terima kasih', 'thanks', 'makasih', 'ok oke', 'baik', 'siap', 'sepakat', 'setuju'])) {
-            return "Terima kasih sudah memesan! 🙏 Kami akan segera memproses pesanan Anda. Ada yang bisa kami bantu lagi?";
+        // Confirmation
+        if (self::containsKeywords($messageBody, ['terima kasih', 'makasih', 'thanks', 'ok', 'baik', 'siap', 'sepakat'])) {
+            return "Terima kasih! 🙏 Pesanan Anda akan kami proses. Ada yang bisa dibantu lagi? 😊";
         }
 
-        // Farewell
-        if (self::containsKeywords($messageBody, ['bye', 'dadah', 'sampai jumpa', 'nanti', 'dulu', 'bye bye', 'goodbye'])) {
-            return "Sampai jumpa! Terima kasih telah memilih Buket Cute 🌸";
+        // Goodbye
+        if (self::containsKeywords($messageBody, ['bye', 'dadah', 'sampai jumpa', 'dalu', 'goodbye'])) {
+            return "Sampai jumpa! Terima kasih memilih Buket Cute 🌸";
         }
 
         return null;
     }
 
     /**
-     * Greeting reply
+     * Ask customer delivery method at start
+     */
+    private static function getDeliveryMethodQuestion(): string
+    {
+        return <<<'EOT'
+Halo! 👋 Terima kasih telah memilih Buket Cute 🌸
+
+Anda ingin pesan buket? Mantap!
+
+Pertanyaan: Bagaimana cara Anda ingin menerima pesanan?
+
+1️⃣ Ambil di toko (Pickup)
+2️⃣ Dikirim ke rumah (Delivery)
+
+Silakan balas "ambil" atau "kirim" 📍
+EOT;
+    }
+
+    /**
+     * Shipping/delivery info - with address question
+     */
+    private static function getShippingReply(): string
+    {
+        return <<<'EOT'
+🚚 Baik, kami akan kirim ke alamat Anda!
+
+📍 Area Kirim: Jakarta & Sekitarnya
+⏱️ Proses: 1-2 hari kerja
+⏱️ Pengiriman: 1-2 hari setelah proses
+
+💰 Biaya Kirim:
+   • Jakarta: Rp 25.000-30.000
+   • Bekasi/Tangerang: Rp 35.000
+
+📝 Silakan berikan:
+1. Alamat lengkap
+2. Nama penerima
+3. HP penerima (jika beda)
+EOT;
+    }
+
+    /**
+     * Greeting reply - personalized with customer name
      */
     private static function getGreetingReply(Customer $customer): string
     {
@@ -87,7 +184,15 @@ class ChatbotService
             $greeting = "Malam";
         }
 
-        return "Halo {$customer->name}! 👋 $greeting Kami dari Buket Cute. Apa yang bisa kami bantu? Silakan pilih produk atau tanyakan apapun tentang buket kami! 🌸";
+        // Use real customer name if available and not default
+        $customerName = $customer->name;
+        if (str_contains($customerName, 'Customer') || empty($customerName)) {
+            $customerDisplayName = 'Semuanya';
+        } else {
+            $customerDisplayName = $customerName;
+        }
+
+        return "Halo $customerDisplayName! 👋\n$greeting Kami dari Buket Cute 🌸\n\nApakah Anda ingin memesan buket? Silakan ketik \"pesan\" atau tanyakan apapun tentang produk kami! 😊";
     }
 
     /**
@@ -98,47 +203,27 @@ class ChatbotService
         return <<<'EOT'
 🌸 Produk Kami:
 
-1. **Buket Romantis** - Rp 150.000-500.000
-   Cocok untuk: Anniversary, Valentine, Proposal
+1. Buket Romantis - Rp 150.000-500.000
+   (Anniversary, Valentine, Proposal)
 
-2. **Buket Ulang Tahun** - Rp 100.000-300.000
-   Terdiri dari: Bunga pilihan + hiasan unik
+2. Buket Ulang Tahun - Rp 100.000-300.000
+   (Bunga + hiasan pilihan)
 
-3. **Buket Ucapan** - Rp 75.000-200.000
-   Untuk: Congratulations, Get well, dll
+3. Buket Ucapan - Rp 75.000-200.000
+   (Congratulations, Get well, dll)
 
-4. **Custom Buket** - Harga menyesuaikan
-   Sesuai keinginan kamu!
+4. Custom Buket - Harga menyesuaikan
+   (Sesuai keinginan Anda)
 
-Tertarik dengan yang mana? Silakan sebutkan jumlah dan alamat pengiriman 📍
+Tertarik? Sebutkan:
+- Jenis buket
+- Jumlah
+- Alamat pengiriman/pickup
 EOT;
     }
 
     /**
-     * Shipping/delivery info
-     */
-    private static function getShippingReply(): string
-    {
-        return <<<'EOT'
-🚚 Informasi Pengiriman:
-
-📍 Area Kirim: Jakarta & Sekitarnya
-⏱️ Waktu Proses: 1-2 hari kerja
-💰 Biaya Kirim: 
-   • Area Jakarta Pusat/Selatan: Rp 25.000
-   • Area Jakarta Timur/Barat/Utara: Rp 30.000
-   • Bekasi/Tangerang: Rp 35.000
-
-Mau pesan sekarang? Silakan sebutkan:
-1. Jenis buket
-2. Jumlah
-3. Alamat lengkap
-4. Nama penerima (opsional)
-EOT;
-    }
-
-    /**
-     * Ask for order status - link to see existing orders
+     * Ask for order status
      */
     private static function getStatusAskReply(Customer $customer): string
     {
@@ -146,10 +231,10 @@ EOT;
         
         if ($lastOrder) {
             $status = self::getOrderStatusText($lastOrder->status);
-            return "Status pesanan terakhir Anda: *$status* 📦\n\nUntuk info lebih lengkap, silakan hubungi admin kami atau klik link: admin akan segera membantu!";
+            return "📦 Status pesanan terbaru Anda: *$status*\n\nAda pertanyaan? Admin kami siap membantu! 😊";
         }
 
-        return "Sepertinya Anda belum punya pesanan sebelumnya. Mau pesan buket sekarang? 🌸";
+        return "Sepertinya Anda belum punya pesanan. Mau pesan buket sekarang? 🌸";
     }
 
     /**
@@ -173,7 +258,7 @@ EOT;
     /**
      * Check if message contains keywords
      */
-    private static function containsKeywords(string $message, array $keywords): bool
+    public static function containsKeywords(string $message, array $keywords): bool
     {
         foreach ($keywords as $keyword) {
             if (strpos($message, strtolower($keyword)) !== false) {

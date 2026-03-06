@@ -22,10 +22,17 @@ class MessageController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        \Log::info("=== MessageController::store START ===", [
+            'message_id' => $request->input('message_id'),
+            'from' => $request->input('from'),
+            'body' => substr($request->input('body'), 0, 50),
+            'token_match' => $request->header('X-API-Token') === config('app.wa_bot_token'),
+        ]);
+
         $validated = $request->validate([
             'message_id' => 'required|string|unique:messages,message_id',
             'from' => 'required|string',
-            'timestamp' => 'required|date',
+            'timestamp' => 'required|numeric',
             'body' => 'required|string',
             'type' => 'required|string',
             'is_incoming' => 'required|boolean',
@@ -43,11 +50,26 @@ class MessageController extends Controller
             // Don't re-format, use as-is
             $phoneNumber = $validated['from'];
 
-            \Log::info("MessageController store", [
-                'received_from' => $validated['from'],
+            \Log::info("MessageController store - Processing", [
+                'message_id' => $validated['message_id'],
                 'phone_number' => $phoneNumber,
-                'body' => substr($validated['body'], 0, 50),
+                'body' => substr($validated['body'], 0, 80),
+                'timestamp' => $validated['timestamp'],
             ]);
+
+            // Check if message_id already exists (safety check)
+            $existingMessage = Message::where('message_id', $validated['message_id'])->first();
+            if ($existingMessage) {
+                \Log::warn("⚠️ Duplicate message_id detected: {$validated['message_id']}");
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Message already exists',
+                    'data' => [
+                        'id' => $existingMessage->id,
+                        'customer_id' => $existingMessage->customer_id,
+                    ],
+                ], 200); // Return 200 to not fail Node.js
+            }
 
             // Find or create customer with clean phone number
             $customer = Customer::firstOrCreate(
@@ -58,7 +80,24 @@ class MessageController extends Controller
                 ]
             );
 
-            \Log::info("MessageController store - Customer ID: {$customer->id}, Phone: {$customer->phone}");
+            \Log::info("MessageController - Customer loaded", [
+                'customer_id' => $customer->id,
+                'customer_phone' => $customer->phone,
+            ]);
+
+            // Convert unix timestamp to datetime if provided
+            $createdAtTime = null;
+            if (!empty($validated['timestamp'])) {
+                try {
+                    // If timestamp is numeric (unix seconds), convert to Carbon
+                    if (is_numeric($validated['timestamp'])) {
+                        $createdAtTime = \Carbon\Carbon::createFromTimestamp($validated['timestamp']);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warn("Could not parse timestamp: " . $e->getMessage());
+                    $createdAtTime = null;
+                }
+            }
 
             // Store message with media fields
             $message = Message::create([
@@ -77,6 +116,7 @@ class MessageController extends Controller
                 'media_type' => $validated['media_type'] ?? null,
                 'mime_type' => $validated['mime_type'] ?? null,
                 'media_size' => $validated['media_size'] ?? null,
+                'created_at' => $createdAtTime,
             ]);
 
             // Queue jobs for processing
@@ -96,8 +136,18 @@ class MessageController extends Controller
                     'customer_id' => $customer->id,
                 ],
             ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation error storing message', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all(),
+            ]);
+            throw $e;
         } catch (\Exception $e) {
-            \Log::error('Error storing message: ' . $e->getMessage());
+            \Log::error('Error storing message: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'error' => 'Failed to save message',
                 'details' => $e->getMessage(),

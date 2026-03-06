@@ -16,6 +16,7 @@ use App\Http\Controllers\MediaController;
 |
 */
 
+
 // Public API routes (no authentication for bot)
 Route::prefix('messages')->group(function () {
     Route::post('store', [MessageController::class, 'store']);

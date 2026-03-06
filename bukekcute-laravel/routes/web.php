@@ -67,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
         // Orders
         Route::resource('orders', OrderController::class);
         Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+        Route::post('orders/{customer}/confirm-from-chat/{orderSession}', [OrderController::class, 'confirmFromChat'])->name('orders.confirm-from-chat');
 
         // Chat
         Route::resource('chat', ChatController::class)->only(['index', 'show']);

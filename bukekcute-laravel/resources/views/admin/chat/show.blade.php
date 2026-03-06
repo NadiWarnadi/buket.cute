@@ -187,31 +187,6 @@
     }
 </style>
 
-{{-- DEBUG INFO --}}
-@if(config('app.debug'))
-<div class="alert alert-info alert-sm mb-3">
-    <strong>🔍 DEBUG:</strong>
-    <br>Customer ID: {{ $customer->id }}
-    <br>Customer Name: {{ $customer->name }}
-    <br>Customer Phone: {{ $customer->phone }}
-    <br>Formatted Phone: {{ $customer->formatted_phone ?? 'N/A' }}
-    <br>WhatsApp Number: {{ $customer->getWhatsAppNumber() ?? 'N/A' }}
-    <br>Total Messages: {{ $messages->total() }}
-    <br>Messages on this page: {{ $messages->count() }}
-</div>
-@endif
-
-{{-- DEBUG INFO --}}
-@if(config('app.debug'))
-<div class="alert alert-info alert-sm mb-3">
-    <strong>🔍 DEBUG:</strong>
-    <br>Customer ID: <code>{{ $customer->id ?? 'NULL' }}</code>
-    <br>Customer Name: <code>{{ $customer->name ?? 'NULL' }}</code>
-    <br>Customer Phone: <code>{{ $customer->phone ?? 'NULL' }}</code>
-    <br>Has Query String: <code>{{ $customer ? 'YES' : 'NO' }}</code>
-</div>
-@endif
-
 <div class="row mb-4">
     <div class="col-12">
         <a href="{{ route('admin.chat.index') }}" class="btn btn-secondary btn-sm">
@@ -234,11 +209,7 @@
                     </p>
                 </div>
 
-                <div class="mb-3">
-                    <h6 class="text-muted mb-1">Email</h6>
-                    <p class="mb-0">{{ $customer->email ?? '-' }}</p>
-                </div>
-
+           
                 <div class="mb-3">
                     <h6 class="text-muted mb-1">Alamat</h6>
                     <p class="mb-0 small">{{ $customer->address ?? '-' }}</p>
@@ -258,6 +229,155 @@
                 @endif
             </div>
         </div>
+<!--  ini buat sambungan ke wa 
+         -->
+
+        {{-- Order Session Panel --}}
+        @php
+            $orderSession = \App\Models\OrderSession::where('customer_id', $customer->id)
+                ->where('status', 'active')
+                ->first();
+        @endphp
+
+        @if($orderSession)
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-clipboard-check"></i> DRAFT PESANAN</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-1">Progress</h6>
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ $orderSession->getCompletionPercentage() }}%"
+                                 aria-valuenow="{{ $orderSession->getCompletionPercentage() }}" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ $orderSession->getCompletionPercentage() }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Requirements Checklist --}}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2"><i class="bi bi-list-check"></i> Syarat Minimal</h6>
+                        <div class="small">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" disabled 
+                                    @if($orderSession->customer_name) checked @endif>
+                                <label class="form-check-label">
+                                    Nama
+                                    @if($orderSession->customer_name)
+                                        <span class="text-success">✓</span>
+                                    @else
+                                        <span class="text-danger">✗</span>
+                                    @endif
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" disabled 
+                                    @if($orderSession->customer_address) checked @endif>
+                                <label class="form-check-label">
+                                    Alamat
+                                    @if($orderSession->customer_address)
+                                        <span class="text-success">✓</span>
+                                    @else
+                                        <span class="text-danger">✗</span>
+                                    @endif
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" disabled 
+                                    @if($orderSession->product_description) checked @endif>
+                                <label class="form-check-label">
+                                    Deskripsi Produk
+                                    @if($orderSession->product_description)
+                                        <span class="text-success">✓</span>
+                                    @else
+                                        <span class="text-danger">✗</span>
+                                    @endif
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" disabled 
+                                    @if($orderSession->delivery_type) checked @endif>
+                                <label class="form-check-label">
+                                    Pengiriman
+                                    @if($orderSession->delivery_type)
+                                        <span class="text-success">✓</span>
+                                    @else
+                                        <span class="text-danger">✗</span>
+                                    @endif
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Data Yang Dikumpulkan --}}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2"><i class="bi bi-info-circle"></i> Data Pesanan</h6>
+                        <div class="small">
+                            @if($orderSession->customer_name)
+                                <div class="mb-2">
+                                    <strong>📝 Nama:</strong> {{ $orderSession->customer_name }}
+                                </div>
+                            @endif
+                            @if($orderSession->customer_address)
+                                <div class="mb-2">
+                                    <strong>📍 Alamat:</strong> <br>
+                                    <span class="small">{{ Str::limit($orderSession->customer_address, 50) }}</span>
+                                </div>
+                            @endif
+                            @if($orderSession->product_description)
+                                <div class="mb-2">
+                                    <strong>💐 Produk:</strong><br>
+                                    <span class="small">{{ Str::limit($orderSession->product_description, 50) }}</span>
+                                </div>
+                            @endif
+                            @if($orderSession->delivery_type)
+                                <div class="mb-2">
+                                    <strong>🚚 Pengiriman:</strong> 
+                                    {{ $orderSession->delivery_type === 'delivery' ? 'Dikirim' : 'Ambil di Toko' }}
+                                </div>
+                            @endif
+                            @if($orderSession->reference_image_url)
+                                <div class="mb-2">
+                                    <strong>📸 Referensi:</strong> Ada
+                                </div>
+                            @endif
+                            @if($orderSession->greeting_note)
+                                <div class="mb-2">
+                                    <strong>📝 Kartu Ucapan:</strong><br>
+                                    <span class="small">{{ Str::limit($orderSession->greeting_note, 50) }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Tombol Konfirmasi --}}
+                    @if($orderSession->isComplete())
+                        <form action="{{ route('admin.orders.confirm-from-chat', [$customer->id, $orderSession->id]) }}" 
+                              method="POST" class="d-grid gap-2">
+                            @csrf
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-check-circle"></i> KONFIRMASI PESANAN
+                            </button>
+                        </form>
+                        <small class="text-success d-block mt-2">
+                            <i class="bi bi-check2"></i> Semua data terpenuhi!
+                        </small>
+                    @else
+                        @php $missing = $orderSession->getMissingFields(); @endphp
+                        <button class="btn btn-secondary btn-sm w-100" disabled>
+                            <i class="bi bi-lock"></i> Konfirmasi Pesanan
+                        </button>
+                        <small class="text-danger d-block mt-2">
+                            <i class="bi bi-exclamation-circle"></i> 
+                            Lengkapi: {{ implode(', ', $missing) }}
+                        </small>
+                    @endif
+                </div>
+            </div>
+        @endif
     </div>
 
     <div class="col-12 col-lg-8 mb-4">
@@ -387,7 +507,7 @@
             <div class="chat-input-area">
                 <div id="alertContainer"></div>
 
-                @if($customer && $customer->id)
+                @if($customer->id)
                     <form id="chatForm" action="{{ route('admin.chat.send', $customer->id) }}" method="POST">
                         @csrf
 
@@ -418,8 +538,8 @@
                 @else
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle"></i> 
-                        <strong>Customer tidak valid!</strong><br>
-                        Reload halaman atau kembali ke daftar chat.
+                        <strong>Opps! Pelanggan tidak ditemukan</strong><br>
+                        Silakan kembali ke daftar chat.
                     </div>
                 @endif
             </div>
@@ -431,33 +551,34 @@
 // Initialize
 console.log('Chat form script initialized');
 
-// Character counter
-var messageInput = document.getElementById('message');
-if (messageInput) {
-    messageInput.addEventListener('input', function() {
-        var charCount = document.getElementById('charCount');
-        if (charCount) {
-            charCount.textContent = this.value.length;
-        }
-    });
-}
+// Tunggu DOM fully loaded sebelum inisialisasi
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter
+    var messageInput = document.getElementById('message');
+    if (messageInput) {
+        messageInput.addEventListener('input', function() {
+            var charCount = document.getElementById('charCount');
+            if (charCount) {
+                charCount.textContent = this.value.length;
+            }
+        });
+    }
 
-// Auto-scroll to bottom on page load
-window.addEventListener('load', function() {
+    // Auto-scroll to bottom on page load
     var messagesArea = document.getElementById('messagesArea');
     if (messagesArea) {
         messagesArea.scrollTop = messagesArea.scrollHeight;
     }
-});
 
-// Handle form submission with AJAX
-var chatForm = document.getElementById('chatForm');
-if (chatForm) {
-    console.log('Chat form found, attaching submit handler');
-    chatForm.addEventListener('submit', handleFormSubmit);
-} else {
-    console.warn('Chat form not found!');
-}
+    // Handle form submission with AJAX
+    var chatForm = document.getElementById('chatForm');
+    if (chatForm) {
+        console.log('Chat form found, attaching submit handler');
+        chatForm.addEventListener('submit', handleFormSubmit);
+    } else {
+        console.warn('Chat form not found!');
+    }
+});
 
 async function handleFormSubmit(e) {
     e.preventDefault();
@@ -483,6 +604,7 @@ async function handleFormSubmit(e) {
             throw new Error('CSRF token not found');
         }
 
+        var chatForm = document.getElementById('chatForm');
         var toWhatsappCheckbox = document.getElementById('toWhatsapp');
         var toWhatsapp = toWhatsappCheckbox && toWhatsappCheckbox.checked ? 1 : 0;
 
@@ -551,14 +673,6 @@ function showAlert(message, type) {
         if (alert) {
             alert.style.display = 'none';
             setTimeout(() => alert.remove(), 300);
-        }
-    }, 5000);
-}
-</script>
-        const alert = alertContainer.querySelector('.alert');
-        if (alert) {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
         }
     }, 5000);
 }
