@@ -1,0 +1,5 @@
+Customer
+├── Orders (1:N)
+├── Conversations (1:N)
+├── Messages (1:N)
+└── OrderDrafts (1:N)
