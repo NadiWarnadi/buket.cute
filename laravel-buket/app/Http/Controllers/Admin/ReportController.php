@@ -19,39 +19,43 @@ class ReportController extends Controller
     {
         $startDate = $request->start_date ? Carbon::createFromFormat('Y-m-d', $request->start_date) : Carbon::now()->startOfMonth();
         $endDate = $request->end_date ? Carbon::createFromFormat('Y-m-d', $request->end_date) : Carbon::now()->endOfDay();
-
+          
+        $productSales = collect([]);
+       // ini untuk keranggka ketika data kosong
+        $orders = Order::with('customer')
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->latest()
+        ->paginate(10);
         // Statistik umum
         $totalOrders = Order::whereBetween('created_at', [$startDate, $endDate])->count();
         $totalRevenue = Order::whereBetween('created_at', [$startDate, $endDate])->sum('total_price');
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 
         // Order status breakdown
-        $statusBreakdown = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('status')
-            ->select('status', DB::raw('count(*) as count'), DB::raw('sum(total_price) as total'))
-            ->get();
+     $statusBreakdown = Order::whereBetween('created_at', [$startDate, $endDate])
+    ->groupBy('status')
+    ->selectRaw('status, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
+    ->get();
 
         // Daily sales data untuk chart
-        $dailySales = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy(DB::raw('DATE(created_at)'))
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('count(*) as count'),
-                DB::raw('sum(total_price) as total')
-            )
-            ->orderBy('date')
-            ->get();
+    $dailySales = Order::whereBetween('created_at', [$startDate, $endDate])
+    ->groupByRaw('DATE(created_at)') // Gunakan groupByRaw
+    ->selectRaw('DATE(created_at) as date, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
+    ->orderBy('date')
+    ->get();
 
         // Top customers
-        $topCustomers = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->with('customer')
-            ->groupBy('customer_id')
-            ->select('customer_id', DB::raw('count(*) as count'), DB::raw('sum(total_price) as total'))
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get();
+      $topCustomers = Order::whereBetween('created_at', [$startDate, $endDate])
+    ->with('customer')
+    ->groupBy('customer_id')
+    ->selectRaw('customer_id, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
+    ->orderByDesc('total')
+    ->limit(10)
+    ->get();
 
         return view('admin.reports.sales', compact(
+            'orders',
+             'productSales',
             'totalOrders',
             'totalRevenue',
             'avgOrderValue',

@@ -181,7 +181,7 @@
         </div>
     </div>
 </div>
-@endsection
+
                                 </tr>
                             </thead>
                             <tbody>
@@ -279,7 +279,9 @@
                                     <strong>{{ $order->items->sum('quantity') }}</strong>
                                 </td>
                                 <td class="text-end text-success">
-                                    <strong>Rp {{ number_format($order->items->sum(DB::raw('quantity * price')), 0, ',', '.') }}</strong>
+                                   <strong>
+    Rp {{ number_format($order->items->sum(fn($item) => $item->quantity * $item->price), 0, ',', '.') }}
+</strong>
                                 </td>
                                 <td>
                                     @php
@@ -320,7 +322,7 @@
 
     <!-- Back Button -->
     <div class="mt-4">
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
+        <a href="{{ route('dashboard') }}" class="btn btn-secondary">
             ← Kembali
         </a>
     </div>
