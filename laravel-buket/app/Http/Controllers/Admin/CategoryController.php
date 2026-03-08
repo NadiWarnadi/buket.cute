@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {   
@@ -30,8 +31,13 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+           $request->merge([
+        'slug' => Str::slug($request->name),
+    ]);
+    
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories',
+            'slug' => 'required|string|unique:categories,slug',
             'description' => 'nullable|string',
         ]);
 

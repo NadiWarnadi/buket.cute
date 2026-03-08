@@ -128,7 +128,7 @@
         @endif
     </div>
 </div>
-@endsection
+
                     <select class="form-select" id="type" name="type">
                         <option value="">-- Semua --</option>
                         <option value="products" {{ request('type') === 'products' ? 'selected' : '' }}>Produk</option>
@@ -210,34 +210,38 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($products as $product)
-                                    @php
-                                        $isLow = $product->stock <= ($product->minimum_stock ?? 5);
-                                    @endphp
-                                    <tr class="{{ $isLow ? 'table-warning' : '' }}">
-                                        <td>
-                                            <strong>{{ $product->name }}</strong><br>
-                                            <small class="text-muted">SKU: {{ $product->sku ?? '-' }}</small>
-                                        </td>
-                                        <td class="text-end">
-                                            <strong>{{ $product->stock }}</strong>
-                                        </td>
-                                        <td class="text-end">
-                                            <small>{{ $product->minimum_stock ?? '-' }}</small>
-                                        </td>
-                                        <td>
-                                            @if($isLow)
-                                                <span class="badge bg-warning">⚠️ Rendah</span>
-                                            @else
-                                                <span class="badge bg-success">✓ Normal</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-3">Tidak ada data produk</td>
-                                    </tr>
-                                @endforelse
+                         
+                            @forelse($ingredients as $product)
+                                @php
+                                    
+                                    $isLow = $product->stock <= ($product->min_stock ?? 5);
+                                @endphp
+                                <tr class="{{ $isLow ? 'table-warning' : '' }}">
+                                    <td>
+                                        <strong>{{ $product->name }}</strong><br>
+                                        <small class="text-muted">SKU: {{ $product->sku ?? '-' }}</small>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ $product->stock }}</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        {{-- 3. Ganti minimum_stock menjadi min_stock di sini juga --}}
+                                        <small>{{ $product->min_stock ?? '-' }}</small>
+                                    </td>
+                                    <td>
+                                        @if($isLow)
+                                            <span class="badge bg-warning">⚠️ Rendah</span>
+                                        @else
+                                            <span class="badge bg-success">✓ Normal</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center">Data stok tidak ditemukan.</td>
+                                </tr>
+                            @endforelse
+
                             </tbody>
                         </table>
                     </div>
@@ -319,7 +323,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($movements as $movement)
+                        @forelse($monthlyMovements as $movement)
                             <tr>
                                 <td>
                                     <small>{{ $movement->created_at->format('d/m/Y H:i') }}</small>
@@ -361,17 +365,17 @@
             </div>
 
             <!-- Pagination -->
-            @if($movements && $movements->hasPages())
-                <div class="p-3 border-top">
-                    {{ $movements->links() }}
-                </div>
-            @endif
+           @if($ingredients->hasPages())
+    <div class="mt-4">
+        {{ $ingredients->links() }}
+    </div>
+@endif
         </div>
     </div>
 
     <!-- Back Button -->
     <div class="mt-4">
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
+        <a href="{{ route('dashboard') }}" class="btn btn-secondary">
             ← Kembali
         </a>
     </div>

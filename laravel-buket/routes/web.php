@@ -8,7 +8,6 @@ use App\Http\Controllers\Admin\{ProductController,CategoryController
     ,IngredientController,PurchaseController,CustomerController,OrderController,ChatController,ReportController,SettingController};
 
 
-
 // Redirect home to public site
 Route::get('/', [PublicController::class, 'home'])->name('public.home');
 

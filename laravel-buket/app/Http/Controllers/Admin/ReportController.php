@@ -71,7 +71,10 @@ class ReportController extends Controller
      * Stock Report - Laporan Stok Bahan Baku
      */
     public function stock(Request $request)
-    {
+    {   
+        // stok produk 
+          $products = \App\Models\Product::orderBy('stock')->take(5)->get();
+        // bahan bahan
         $ingredients = Ingredient::query();
 
         if ($request->status === 'low') {
@@ -102,6 +105,7 @@ class ReportController extends Controller
 
         return view('admin.reports.stock', compact(
             'ingredients',
+            'products',
             'totalIngredients',
             'lowStockCount',
             'emptyStockCount',
