@@ -43,7 +43,7 @@ class Message extends Model
      */
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class)->nullable();
+        return $this->belongsTo(Order::class);
     }
 
     /**

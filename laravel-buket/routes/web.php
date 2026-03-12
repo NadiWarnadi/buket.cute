@@ -38,6 +38,7 @@ Route::get('/media/{filename}', function ($filename) {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+
     // Admin Routes
     Route::prefix('admin')->name('admin.')->group(function () {
         // Categories

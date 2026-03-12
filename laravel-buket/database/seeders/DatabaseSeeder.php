@@ -23,5 +23,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@toko.com',
             'password' => Hash::make('password123'), // Password defau
         ]);
+
+        $this->call(FuzzyRuleSeeder::class);
     }
 }

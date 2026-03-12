@@ -1,24 +1,45 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\Product;
-use App\Models\Category;
 use Illuminate\Http\Request;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Customer;
+use App\Models\Category;
 
 class DashboardController extends Controller
 {
+    /**
+     * Show the dashboard
+     */
     public function index()
     {
+        // Get summary statistics
         $totalProducts = Product::count();
         $totalCategories = Category::count();
-        $lowStockProducts = Product::where('stock', '<=', 5)->count();
+        $totalCustomers = Customer::count();
+        $totalOrders = Order::count();
+        
+        // Count low stock products
+        $lowStockProducts = Product::where('stock', '<=', 5)
+            ->where('is_active', true)
+            ->count();
+        
+        // Count active products
         $activeProducts = Product::where('is_active', true)->count();
+        
+        // Get recent orders
+        $recentOrders = Order::latest()->limit(5)->get();
 
         return view('dashboard', compact(
+            'totalOrders',
             'totalProducts',
+            'totalCustomers',
             'totalCategories',
             'lowStockProducts',
-            'activeProducts'
+            'activeProducts',
+            'recentOrders'
         ));
     }
 }

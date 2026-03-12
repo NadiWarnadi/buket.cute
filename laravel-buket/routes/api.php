@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\WhatsAppController;
+use App\Http\Controllers\Api\FuzzyRuleController;
 
 Route::prefix('whatsapp')->group(function () {
     // Webhook untuk menerima pesan dari wa-service (incoming messages)
@@ -29,5 +30,32 @@ Route::prefix('whatsapp')->group(function () {
     
     // Get active conversation dari customer
     Route::get('/customers/{id}/conversation', [WhatsAppController::class, 'getCustomerConversation'])->name('whatsapp.customer-conversation');
+});
+
+// Fuzzy Bot Routes
+Route::prefix('fuzzy-rules')->group(function () {
+    // Get all rules
+    Route::get('/', [FuzzyRuleController::class, 'index'])->name('fuzzy-rules.index');
+    
+    // Create rule
+    Route::post('/', [FuzzyRuleController::class, 'store'])->name('fuzzy-rules.store');
+    
+    // Get stats
+    Route::get('/stats', [FuzzyRuleController::class, 'stats'])->name('fuzzy-rules.stats');
+    
+    // Test message
+    Route::post('/test', [FuzzyRuleController::class, 'testMessage'])->name('fuzzy-rules.test');
+    
+    // Bulk import
+    Route::post('/import', [FuzzyRuleController::class, 'import'])->name('fuzzy-rules.import');
+    
+    // Get single rule
+    Route::get('/{fuzzyRule}', [FuzzyRuleController::class, 'show'])->name('fuzzy-rules.show');
+    
+    // Update rule
+    Route::put('/{fuzzyRule}', [FuzzyRuleController::class, 'update'])->name('fuzzy-rules.update');
+    
+    // Delete rule
+    Route::delete('/{fuzzyRule}', [FuzzyRuleController::class, 'destroy'])->name('fuzzy-rules.destroy');
 });
 
