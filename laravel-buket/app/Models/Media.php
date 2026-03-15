@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Media extends Model
 {
@@ -18,7 +18,7 @@ class Media extends Model
         'size',
         'message_id',
         'file_type',
-        'file_size'
+        'file_size',
     ];
 
     protected $casts = [
@@ -48,6 +48,6 @@ class Media extends Model
      */
     public function getUrl(): string
     {
-        return asset('storage/' . $this->file_path);
+        return asset('storage/'.$this->file_path);
     }
 }

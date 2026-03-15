@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'archived', 'closed']);
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
-         });
+        });
     }
 
     /**

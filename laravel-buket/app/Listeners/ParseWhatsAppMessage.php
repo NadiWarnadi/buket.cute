@@ -23,19 +23,19 @@ class ParseWhatsAppMessage
                 'message_id' => $message->id,
                 'from' => $message->from,
                 'type' => $message->type,
-                'content' => substr($message->body, 0, 50)
+                'content' => substr($message->body, 0, 50),
             ]);
 
             // Update message status parsed
             $message->update([
                 'parsed' => true,
-                'parsed_at' => now()
+                'parsed_at' => now(),
             ]);
 
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error in ParseWhatsAppMessage listener', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }

@@ -11,16 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('order_items', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('product_id')->nullable()->constrained(); // Nullable untuk custom
-    $table->text('custom_description')->nullable(); // Diisi jika product_id null
-    $table->integer('quantity');
-    $table->decimal('price', 10, 2);
-    $table->decimal('subtotal', 10, 2);
-    $table->timestamps();
-});
+        Schema::create('order_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_id')->nullable()->constrained(); // Nullable untuk custom
+            $table->text('custom_description')->nullable(); // Diisi jika product_id null
+            $table->integer('quantity');
+            $table->decimal('price', 10, 2);
+            $table->decimal('subtotal', 10, 2);
+            $table->timestamps();
+        });
     }
 
     /**

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
 class SettingController extends Controller
@@ -19,11 +19,11 @@ class SettingController extends Controller
     private function getSettings()
     {
         $path = storage_path(self::SETTINGS_FILE);
-        
+
         if (File::exists($path)) {
             return json_decode(File::get($path), true) ?? $this->getDefaultSettings();
         }
-        
+
         return $this->getDefaultSettings();
     }
 
@@ -64,6 +64,7 @@ class SettingController extends Controller
     public function index()
     {
         $settings = $this->getSettings();
+
         return view('admin.settings.index', compact('settings'));
     }
 
@@ -89,17 +90,17 @@ class SettingController extends Controller
         ]);
 
         // Handle checkbox yang tidak terkirim
-        if (!$request->has('notification_enabled')) {
+        if (! $request->has('notification_enabled')) {
             $validated['notification_enabled'] = false;
         }
-        if (!$request->has('whatsapp_enabled')) {
+        if (! $request->has('whatsapp_enabled')) {
             $validated['whatsapp_enabled'] = false;
         }
 
         $this->saveSettings($validated);
 
         return redirect()->route('admin.settings.index')
-                        ->with('success', 'Pengaturan berhasil disimpan.');
+            ->with('success', 'Pengaturan berhasil disimpan.');
     }
 
     /**
@@ -109,7 +110,7 @@ class SettingController extends Controller
     {
         $settings = $this->getSettings();
 
-        if (!$settings['whatsapp_enabled'] || !$settings['whatsapp_api_url']) {
+        if (! $settings['whatsapp_enabled'] || ! $settings['whatsapp_api_url']) {
             return response()->json([
                 'status' => 'disabled',
                 'message' => 'WhatsApp belum diaktifkan',

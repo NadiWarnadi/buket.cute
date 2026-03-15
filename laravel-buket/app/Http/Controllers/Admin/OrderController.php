@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Customer;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
@@ -24,7 +24,7 @@ class OrderController extends Controller
             $search = $request->search;
             $query->whereHas('customer', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%");
             })->orWhere('id', $search);
         }
 
@@ -35,7 +35,7 @@ class OrderController extends Controller
 
         // Sort
         $sort = $request->sort ?? 'latest';
-        $query = match($sort) {
+        $query = match ($sort) {
             'oldest' => $query->orderBy('created_at', 'asc'),
             'customer' => $query->orderBy('customer_id', 'asc'),
             'total-high' => $query->orderBy('total_price', 'desc'),
@@ -109,10 +109,11 @@ class OrderController extends Controller
             DB::commit();
 
             return redirect()->route('admin.orders.show', $order)
-                            ->with('success', 'Pesanan berhasil dibuat.');
+                ->with('success', 'Pesanan berhasil dibuat.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
@@ -193,10 +194,11 @@ class OrderController extends Controller
             DB::commit();
 
             return redirect()->route('admin.orders.show', $order)
-                            ->with('success', 'Pesanan berhasil diperbarui.');
+                ->with('success', 'Pesanan berhasil diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
@@ -210,9 +212,9 @@ class OrderController extends Controller
             $order->delete();
 
             return redirect()->route('admin.orders.index')
-                            ->with('success', 'Pesanan berhasil dihapus.');
+                ->with('success', 'Pesanan berhasil dihapus.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
@@ -230,4 +232,3 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Status pesanan berhasil diperbarui.');
     }
 }
-

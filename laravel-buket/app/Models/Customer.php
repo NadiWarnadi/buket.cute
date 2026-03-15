@@ -40,12 +40,13 @@ class Customer extends Model
     public static function getOrCreateFromPhone($phone)
     {
         $customer = self::where('phone', $phone)->first();
-        if (!$customer) {
+        if (! $customer) {
             $customer = self::create([
                 'phone' => $phone,
                 'name' => null, // Bisa diisi nanti
             ]);
         }
+
         return $customer;
     }
 
@@ -96,6 +97,7 @@ class Customer extends Model
     public function getChatStatus()
     {
         $lastMessage = $this->getLastMessage();
+
         return $lastMessage?->chat_status ?? 'active';
     }
 

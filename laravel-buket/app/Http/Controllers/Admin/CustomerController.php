@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
@@ -17,13 +16,15 @@ class CustomerController extends Controller
         $customers = Customer::query()
             ->when(request('search'), function ($q) {
                 $search = request('search');
+
                 return $q->where('name', 'like', "%{$search}%")
-                         ->orWhere('phone', 'like', "%{$search}%")
-                         ->orWhere('address', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
             })
             ->when(request('sort'), function ($q) {
                 $sort = request('sort');
-                return match($sort) {
+
+                return match ($sort) {
                     'name-asc' => $q->orderBy('name', 'asc'),
                     'name-desc' => $q->orderBy('name', 'desc'),
                     'phone-asc' => $q->orderBy('phone', 'asc'),
@@ -31,7 +32,7 @@ class CustomerController extends Controller
                     'oldest' => $q->orderBy('created_at', 'asc'),
                     default => $q->orderBy('created_at', 'desc'),
                 };
-            }, fn($q) => $q->orderBy('created_at', 'desc'))
+            }, fn ($q) => $q->orderBy('created_at', 'desc'))
             ->paginate(15);
 
         return view('admin.customers.index', compact('customers'));
@@ -59,7 +60,7 @@ class CustomerController extends Controller
         Customer::create($validated);
 
         return redirect()->route('admin.customers.index')
-                        ->with('success', 'Pelanggan berhasil ditambahkan.');
+            ->with('success', 'Pelanggan berhasil ditambahkan.');
     }
 
     /**
@@ -68,6 +69,7 @@ class CustomerController extends Controller
     public function show(Customer $customer)
     {
         $customer->load(['orders', 'conversations']);
+
         return view('admin.customers.show', compact('customer'));
     }
 
@@ -78,6 +80,7 @@ class CustomerController extends Controller
     {
         $customer = Customer::where('phone', $phone)->firstOrFail();
         $customer->load(['orders', 'conversations']);
+
         return view('admin.customers.show', compact('customer'));
     }
 
@@ -96,14 +99,14 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
-            'phone' => 'required|string|max:20|unique:customers,phone,' . $customer->id,
+            'phone' => 'required|string|max:20|unique:customers,phone,'.$customer->id,
             'address' => 'nullable|string|max:500',
         ]);
 
         $customer->update($validated);
 
         return redirect()->route('admin.customers.index')
-                        ->with('success', 'Pelanggan berhasil diperbarui.');
+            ->with('success', 'Pelanggan berhasil diperbarui.');
     }
 
     /**
@@ -114,12 +117,12 @@ class CustomerController extends Controller
         // Cek apakah customer memiliki orders yang aktif
         if ($customer->orders()->exists()) {
             return redirect()->route('admin.customers.index')
-                            ->with('error', 'Tidak dapat menghapus pelanggan yang memiliki pesanan.');
+                ->with('error', 'Tidak dapat menghapus pelanggan yang memiliki pesanan.');
         }
 
         $customer->delete();
 
         return redirect()->route('admin.customers.index')
-                        ->with('success', 'Pelanggan berhasil dihapus.');
+            ->with('success', 'Pelanggan berhasil dihapus.');
     }
 }

@@ -28,17 +28,17 @@ class TestFuzzyBot extends Command
     {
         $message = $this->argument('message');
 
-        $this->info('Testing message: ' . $message);
+        $this->info('Testing message: '.$message);
         $this->newLine();
 
         $result = $fuzzyBot->processMessage($message);
 
         if ($result['matched']) {
             $this->info('✓ Match found!');
-            $this->line('Intent: ' . $result['intent']);
-            $this->line('Action: ' . $result['action']);
-            $this->line('Confidence: ' . $result['confidence'] * 100 . '%');
-            $this->line('Response: ' . $result['response']);
+            $this->line('Intent: '.$result['intent']);
+            $this->line('Action: '.$result['action']);
+            $this->line('Confidence: '.$result['confidence'] * 100 .'%');
+            $this->line('Response: '.$result['response']);
         } else {
             $this->warn('✗ No match found');
         }

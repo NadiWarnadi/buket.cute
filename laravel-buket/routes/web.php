@@ -1,12 +1,17 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PublicController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ChatController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\IngredientController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\Admin\{ProductController,CategoryController
-    ,IngredientController,PurchaseController,CustomerController,OrderController,ChatController,ReportController,SettingController};
-
+use App\Http\Controllers\PublicController;
+use Illuminate\Support\Facades\Route;
 
 // Redirect home to public site
 Route::get('/', [PublicController::class, 'home'])->name('public.home');
@@ -25,9 +30,9 @@ Route::post('/order-to-whatsapp', [PublicController::class, 'orderToWhatsApp'])-
 
 // Public media files
 Route::get('/media/{filename}', function ($filename) {
-    $path = public_path('media/' . $filename);
-    
-    if (!file_exists($path)) {
+    $path = public_path('media/'.$filename);
+
+    if (! file_exists($path)) {
         abort(404);
     }
 
@@ -37,7 +42,6 @@ Route::get('/media/{filename}', function ($filename) {
 // Dashboard (hanya untuk authenticated users)
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
 
     // Admin Routes
     Route::prefix('admin')->name('admin.')->group(function () {

@@ -12,14 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('order_drafts', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('conversation_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('customer_id')->constrained();
-    $table->json('data');
-    $table->string('step', 50);
-    $table->timestamp('expires_at')->nullable();
-    $table->timestamps();
-});
+            $table->id();
+            $table->foreignId('conversation_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('customer_id')->constrained();
+            $table->json('data');
+            $table->string('step', 50);
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+        });
     }
 
     /**

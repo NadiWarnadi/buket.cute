@@ -2,7 +2,7 @@
 
 /**
  * CONTOH PENGGUNAAN WHATSAPP INTEGRATION
- * 
+ *
  * File ini menunjukkan berbagai cara menggunakan WhatsApp integration
  * untuk pengiriman pesan dan media kepada customer.
  */
@@ -24,17 +24,17 @@ class OrderController {
     public function create(Request $request)
     {
         $validated = $request->validate([...]);
-        
+
         $customer = Customer::findOrFail($validated['customer_id']);
         $order = Order::create([...]);
-        
+
         // Kirim notifikasi WhatsApp
         $waService = new WhatsAppService();
         $waService->sendText(
             $customer->phone,
             "Pesanan Anda telah diterima. No pesanan: #{$order->id}"
         );
-        
+
         return response()->json(['success' => true]);
     }
 }
@@ -57,7 +57,7 @@ class OrderService {
         $pdf = Pdf::loadView('invoices.order', ['order' => $order]);
         $pdfPath = storage_path('app/invoices/order-' . $order->id . '.pdf');
         $pdf->save($pdfPath);
-        
+
         // Kirim via WhatsApp
         $waService = new WhatsAppService();
         $waService->sendMedia(
@@ -65,7 +65,7 @@ class OrderService {
             $pdfPath,
             "Berikut adalah invoice pesanan Anda"
         );
-        
+
         return true;
     }
 }
@@ -156,9 +156,9 @@ class NotificationController
             'customer_ids.*' => 'exists:customers,id',
             'message' => 'required|string|max:1024'
         ]);
-        
+
         $customers = Customer::whereIn('id', $request->customer_ids)->get();
-        
+
         foreach ($customers as $customer) {
             // Kirim via endpoint
             $response = Http::post(route('whatsapp.send-text'), [
@@ -166,7 +166,7 @@ class NotificationController
                 'message' => $request->message
             ]);
         }
-        
+
         return response()->json(['sent' => count($customers)]);
     }
 }
@@ -195,14 +195,14 @@ class ProcessWhatsAppKeywords
     {
         $message = $event->message;
         $body = strtolower($message->body);
-        
+
         // Deteksi keyword
         if (strpos($body, 'menu') !== false) {
             // Kirim menu list
         } elseif (strpos($body, 'harga') !== false) {
             // Kirim price list
         }
-        
+
         $message->update(['parsed' => true]);
     }
 }
@@ -222,21 +222,21 @@ class WhatsAppIntegrationTest extends TestCase
     public function test_send_text_message()
     {
         $customer = Customer::factory()->create(['phone' => '628123456789']);
-        
+
         $response = $this->post('/api/whatsapp/send-text', [
             'customer_id' => $customer->id,
             'message' => 'Test message'
         ]);
-        
+
         $response->assertStatus(201);
         $response->assertJsonStructure(['success', 'message_id']);
     }
-    
+
     public function test_webhook_receives_message()
     {
         Http::fake();
-        
-        $response = $this->post('/api/whatsapp/webhook', 
+
+        $response = $this->post('/api/whatsapp/webhook',
             [
                 'type' => 'text',
                 'from' => '628123456789',
@@ -244,7 +244,7 @@ class WhatsAppIntegrationTest extends TestCase
             ],
             ['x-api-key' => env('WHATSAPP_WEBHOOK_KEY')]
         );
-        
+
         $response->assertStatus(200);
         $this->assertDatabaseHas('messages', [
             'body' => 'Incoming message'

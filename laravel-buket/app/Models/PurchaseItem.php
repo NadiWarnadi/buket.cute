@@ -76,6 +76,6 @@ class PurchaseItem extends Model
      */
     public function getSubtotal(): float
     {
-        return (float)($this->quantity * $this->price);
+        return (float) ($this->quantity * $this->price);
     }
 }

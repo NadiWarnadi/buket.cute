@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // Tambahkan kolom WhatsApp ke tabel media jika belum ada
-        if (!Schema::hasColumn('media', 'message_id')) {
+        if (! Schema::hasColumn('media', 'message_id')) {
             Schema::table('media', function (Blueprint $table) {
                 $table->foreignId('message_id')->nullable()->after('id')->constrained()->cascadeOnDelete();
                 $table->string('file_type', 50)->nullable()->after('mime_type'); // image, video, audio, document

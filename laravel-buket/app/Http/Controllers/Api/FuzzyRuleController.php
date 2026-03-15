@@ -8,8 +8,8 @@ use App\Http\Requests\UpdateFuzzyRuleRequest;
 use App\Models\FuzzyRule;
 use App\Services\FuzzyBotService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class FuzzyRuleController extends Controller
 {
@@ -58,6 +58,7 @@ class FuzzyRuleController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching fuzzy rules', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -93,6 +94,7 @@ class FuzzyRuleController extends Controller
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Error creating fuzzy rule', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -139,6 +141,7 @@ class FuzzyRuleController extends Controller
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Error updating fuzzy rule', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -162,6 +165,7 @@ class FuzzyRuleController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error deleting fuzzy rule', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -188,6 +192,7 @@ class FuzzyRuleController extends Controller
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Error testing fuzzy bot', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -226,6 +231,7 @@ class FuzzyRuleController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error getting fuzzy rule stats', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -246,7 +252,7 @@ class FuzzyRuleController extends Controller
             if (preg_match('~^/(.+)/([imsxADSUXJu]*)$~', $part, $matches)) {
                 try {
                     // Test regex
-                    @preg_match('~' . $matches[1] . '~' . ($matches[2] ?? ''), '');
+                    @preg_match('~'.$matches[1].'~'.($matches[2] ?? ''), '');
                 } catch (\Exception $e) {
                     throw new \Exception("Invalid regex pattern: {$part}");
                 }
@@ -308,6 +314,7 @@ class FuzzyRuleController extends Controller
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::error('Error importing fuzzy rules', ['error' => $e->getMessage()]);
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

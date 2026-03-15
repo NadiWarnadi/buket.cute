@@ -12,6 +12,7 @@ class WhatsAppMessageReceived
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public Message $message;
+
     public array $rawData;
 
     public function __construct(Message $message, array $rawData = [])

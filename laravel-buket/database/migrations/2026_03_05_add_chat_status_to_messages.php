@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('messages', function (Blueprint $table) {
             // Add chat status column untuk track conversation status
             $table->enum('chat_status', ['active', 'archived', 'closed'])->default('active')->after('status');
-            
+
             // Add index untuk customer_id untuk efficient queries
             $table->index('customer_id');
         });

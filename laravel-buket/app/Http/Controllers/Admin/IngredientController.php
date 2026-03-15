@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Ingredient;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
 class IngredientController extends Controller
 {
@@ -20,12 +20,12 @@ class IngredientController extends Controller
         if ($request->search) {
             $search = $request->search;
             $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                ->orWhere('description', 'like', "%{$search}%");
         }
 
         // Sort
         $sort = $request->sort ?? 'latest';
-        $query = match($sort) {
+        $query = match ($sort) {
             'name-asc' => $query->orderBy('name', 'asc'),
             'name-desc' => $query->orderBy('name', 'desc'),
             'stock-low' => $query->orderBy('stock', 'asc'),
@@ -75,7 +75,7 @@ class IngredientController extends Controller
         }
 
         return redirect()->route('admin.ingredients.index')
-                        ->with('success', 'Bahan baku berhasil ditambahkan.');
+            ->with('success', 'Bahan baku berhasil ditambahkan.');
     }
 
     /**
@@ -103,7 +103,7 @@ class IngredientController extends Controller
     public function update(Request $request, Ingredient $ingredient)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:ingredients,name,' . $ingredient->id,
+            'name' => 'required|string|max:255|unique:ingredients,name,'.$ingredient->id,
             'description' => 'nullable|string|max:1000',
             'unit' => 'required|string|max:50',
             'min_stock' => 'nullable|integer|min:0',
@@ -112,7 +112,7 @@ class IngredientController extends Controller
         $ingredient->update($validated);
 
         return redirect()->route('admin.ingredients.index')
-                        ->with('success', 'Bahan baku berhasil diperbarui.');
+            ->with('success', 'Bahan baku berhasil diperbarui.');
     }
 
     /**
@@ -122,13 +122,13 @@ class IngredientController extends Controller
     {
         if ($ingredient->products()->exists()) {
             return redirect()->route('admin.ingredients.index')
-                            ->with('error', 'Tidak dapat menghapus bahan yang sudah digunakan dalam produk.');
+                ->with('error', 'Tidak dapat menghapus bahan yang sudah digunakan dalam produk.');
         }
 
         $ingredient->delete();
 
         return redirect()->route('admin.ingredients.index')
-                        ->with('success', 'Bahan baku berhasil dihapus.');
+            ->with('success', 'Bahan baku berhasil dihapus.');
     }
 
     /**
@@ -167,6 +167,6 @@ class IngredientController extends Controller
         ]);
 
         return redirect()->route('admin.ingredients.show', $ingredient)
-                        ->with('success', "Stok berhasil diperbarui dari {$oldStock} menjadi {$ingredient->stock}.");
+            ->with('success', "Stok berhasil diperbarui dari {$oldStock} menjadi {$ingredient->stock}.");
     }
 }

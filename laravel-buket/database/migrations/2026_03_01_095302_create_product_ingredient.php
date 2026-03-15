@@ -12,12 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('product_ingredient', function (Blueprint $table) {
-    $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('ingredient_id')->constrained()->cascadeOnDelete();
-    $table->integer('quantity');
-    $table->string('unit', 50);
-    $table->primary(['product_id', 'ingredient_id']); // Composite primary key
-});
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('ingredient_id')->constrained()->cascadeOnDelete();
+            $table->integer('quantity');
+            $table->string('unit', 50);
+            $table->primary(['product_id', 'ingredient_id']); // Composite primary key
+        });
 
     }
 

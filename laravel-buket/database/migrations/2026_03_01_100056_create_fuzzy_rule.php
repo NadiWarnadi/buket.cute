@@ -11,16 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('fuzzy_rules', function (Blueprint $table) {
-    $table->id();
-    $table->string('intent', 100);
-    $table->text('pattern'); // Regex/Keywords
-    $table->float('confidence_threshold');
-    $table->string('action', 100);
-    $table->text('response_template')->nullable();
-    $table->boolean('is_active')->default(true);
-    $table->timestamps();
-});
+        Schema::create('fuzzy_rules', function (Blueprint $table) {
+            $table->id();
+            $table->string('intent', 100);
+            $table->text('pattern'); // Regex/Keywords
+            $table->float('confidence_threshold');
+            $table->string('action', 100);
+            $table->text('response_template')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
     }
 
     /**

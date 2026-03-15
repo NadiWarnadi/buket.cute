@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class PublicController extends Controller
@@ -12,7 +12,7 @@ class PublicController extends Controller
      * Beranda (Home Page)
      */
     public function home()
-    {   
+    {
         // Featured products (produk unggulan)
         $featured = Product::with('media')
             ->where('is_active', true)
@@ -52,13 +52,13 @@ class PublicController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
         // Sorting
         $sort = $request->query('sort', 'latest');
-        $query = match($sort) {
+        $query = match ($sort) {
             'price-low' => $query->orderBy('price', 'asc'),
             'price-high' => $query->orderBy('price', 'desc'),
             'name' => $query->orderBy('name', 'asc'),
@@ -149,7 +149,7 @@ class PublicController extends Controller
 
         // Get store WhatsApp from env
         $storeWhatsApp = env('STORE_WHATSAPP', '6281234567890');
-        $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=" . urlencode($message);
+        $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=".urlencode($message);
 
         return back()->with('success', 'Silakan klik tombol WhatsApp di bawah untuk mengirim permintaan custom Anda!')
             ->with('whatsapp_url', $whatsAppUrl);
@@ -178,19 +178,19 @@ class PublicController extends Controller
         $message .= "Saya ingin memesan:\n";
         $message .= "*Produk:* {$product->name}\n";
         $message .= "*Jumlah:* {$quantity}\n";
-        $message .= "*Harga per item:* Rp " . number_format($product->price, 0, ',', '.') . "\n";
-        $message .= "*Total:* Rp " . number_format($product->price * $quantity, 0, ',', '.') . "\n";
+        $message .= '*Harga per item:* Rp '.number_format($product->price, 0, ',', '.')."\n";
+        $message .= '*Total:* Rp '.number_format($product->price * $quantity, 0, ',', '.')."\n";
         if ($product->description) {
             $message .= "\n*Deskripsi:*\n{$product->description}\n";
         }
 
         $storeWhatsApp = env('STORE_WHATSAPP', '6281234567890');
-        $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=" . urlencode($message);
+        $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=".urlencode($message);
 
         return response()->json([
             'success' => true,
             'whatsapp_url' => $whatsAppUrl,
-            'message' => 'Pesanan siap dikirim ke WhatsApp!'
+            'message' => 'Pesanan siap dikirim ke WhatsApp!',
         ]);
     }
 }

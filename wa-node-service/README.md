@@ -12,8 +12,6 @@ wa-gateway-node/
 ├── index.js            # Entry point (Express server)
 └── package.json
 
-Gemini berkata
-Tentu, mari kita rancang ulang dengan fondasi yang lebih kokoh untuk proyek kelompok kalian. Kita akan fokus pada efisiensi sumber daya (low CPU/RAM) dan keamanan, namun tetap mempertahankan kemampuan debugging yang informatif agar kalian mudah memantau arus data saat pengerjaan proyek.
 
 Berikut adalah usulan struktur folder dan alur sistemnya:
 
@@ -42,4 +40,4 @@ Security First: Setiap request dari Laravel ke Node.js (seperti kirim pesan) waj
 
 Data Integrity: Node.js akan melakukan cleaning data (mengubah format JID menjadi nomor HP murni) sebelum dikirim ke Laravel.
 
-Resource Management: Media hanya diunduh jika ukurannya di bawah MAX_FILE_SIZE (15MB) untuk mencegah lonjakan RAM pada Node.js.
+Resource Management: Media hanya diunduh jika ukurannya di bawah MAX_FILE_SIZE (15MB) untuk mencegah lonjakan RAM pada Node.js. bisa di ubah lewat file .env

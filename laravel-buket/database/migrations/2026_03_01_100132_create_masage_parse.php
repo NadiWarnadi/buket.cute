@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('message_parses', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('message_id')->constrained()->cascadeOnDelete();
-    $table->string('intent', 100);
-    $table->float('confidence');
-    $table->json('extracted_data');
-    $table->boolean('is_processed')->default(false);
-    $table->timestamps();
-});
+        Schema::create('message_parses', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('message_id')->constrained()->cascadeOnDelete();
+            $table->string('intent', 100);
+            $table->float('confidence');
+            $table->json('extracted_data');
+            $table->boolean('is_processed')->default(false);
+            $table->timestamps();
+        });
     }
 
     /**

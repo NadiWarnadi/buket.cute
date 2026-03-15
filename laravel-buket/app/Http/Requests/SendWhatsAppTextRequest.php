@@ -22,7 +22,7 @@ class SendWhatsAppTextRequest extends FormRequest
         return [
             'customer_id' => 'required|exists:customers,id',
             'message' => 'required|string|min:1|max:1024',
-            'order_id' => 'nullable|exists:orders,id'
+            'order_id' => 'nullable|exists:orders,id',
         ];
     }
 
@@ -37,7 +37,7 @@ class SendWhatsAppTextRequest extends FormRequest
             'message.required' => 'Message cannot be empty',
             'message.min' => 'Message must at least 1 character',
             'message.max' => 'Message cannot exceed 1024 characters',
-            'order_id.exists' => 'Order not found'
+            'order_id.exists' => 'Order not found',
         ];
     }
 }

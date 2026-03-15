@@ -343,7 +343,35 @@
                                         <i class="bi bi-person-fill"></i> Admin
                                     @endif
                                 </div>
-                                <p class="mb-0" style="word-break: break-word;">{{ $msg->body }}</p>
+                                
+                                <!-- menampilkan media jik ada media kit aatur di controler  -->
+                                @if($msg->media_url)
+                                    <div class="message-media">
+                                        @if($msg->type === 'image')
+                                            <img src="{{ $msg->media_url }}" alt="Media" style="max-height: 300px; border-radius: 8px;">
+                                        @elseif($msg->type === 'video')
+                                            <video width="250" height="250" controls style="border-radius: 8px;">
+                                                <source src="{{ $msg->media_url }}" type="video/mp4">
+                                                Browser Anda tidak mendukung video.
+                                            </video>
+                                        @elseif($msg->type === 'document')
+                                            <div class="message-document">
+                                                <i class="bi bi-file-earmark" style="font-size: 1.5rem;"></i>
+                                                <div>
+                                                    <small class="d-block">{{ $msg->file_name ?? 'Document' }}</small>
+                                                    <a href="{{ $msg->media_url }}" download class="small">
+                                                        <i class="bi bi-download"></i> Unduh
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                @if($msg->body)
+                                    <p class="mb-0" style="word-break: break-word;">{{ $msg->body }}</p>
+                                @endif
+                                
                                 <div class="message-time">
                                     {{ $msg->created_at->format('H:i') }}
                                     @if(!$msg->is_incoming && $msg->status)
@@ -431,6 +459,8 @@
 
 <script>
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB in bytes
+const CUSTOMER_ID = {{ $customer->id }};
+let autoRefreshInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Character counter
@@ -487,17 +517,79 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Form submission
+    // Form submission with trimmed text
     var chatForm = document.getElementById('chatForm');
     if (chatForm) {
         chatForm.addEventListener('submit', function(e) {
-            var messageText = document.getElementById('messageBody').value.trim();
+            var messageTextarea = document.getElementById('messageBody');
+            var messageText = messageTextarea.value.trim();
+            
+            // Trim the textarea value before submission
+            messageTextarea.value = messageText;
+            
             if (!messageText) {
                 e.preventDefault();
                 alert('Pesan tidak boleh kosong!');
             }
         });
     }
+
+    // Start auto-refresh for messages every 3 seconds
+    startAutoRefresh();
+
+    // Reload messages periodically
+    function startAutoRefresh() {
+        // Refresh every 3 seconds
+        autoRefreshInterval = setInterval(function() {
+            refreshMessages();
+        }, 3000);
+    }
+
+    // Function to refresh messages via AJAX
+    function refreshMessages() {
+        fetch(window.location.href, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.text();
+            }
+            throw new Error('Network response was not ok');
+        })
+        .then(html => {
+            // Extract the messages-area from the new HTML
+            const parser = new DOMParser();
+            const newDoc = parser.parseFromString(html, 'text/html');
+            const newMessagesArea = newDoc.querySelector('#messagesArea');
+            const oldMessagesArea = document.querySelector('#messagesArea');
+            
+            if (newMessagesArea && oldMessagesArea) {
+                const oldHTML = oldMessagesArea.innerHTML;
+                const newHTML = newMessagesArea.innerHTML;
+                
+                // Only update if messages have changed
+                if (oldHTML !== newHTML) {
+                    oldMessagesArea.innerHTML = newHTML;
+                    // Auto-scroll to bottom after updating
+                    oldMessagesArea.scrollTop = oldMessagesArea.scrollHeight;
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Auto-refresh error (non-critical):', error);
+        });
+    }
+
+    // Clean up interval on page unload
+    window.addEventListener('beforeunload', function() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    });
 });
 </script>
 @endsection

@@ -21,9 +21,9 @@ class SendWhatsAppMediaRequest extends FormRequest
     {
         return [
             'customer_id' => 'required|exists:customers,id',
-            'file' => 'required|file|max:' . (env('MAX_FILE_SIZE', 15) * 1024),
+            'file' => 'required|file|max:'.(env('MAX_FILE_SIZE', 15) * 1024),
             'caption' => 'nullable|string|max:1024',
-            'order_id' => 'nullable|exists:orders,id'
+            'order_id' => 'nullable|exists:orders,id',
         ];
     }
 
@@ -37,9 +37,9 @@ class SendWhatsAppMediaRequest extends FormRequest
             'customer_id.exists' => 'Customer not found',
             'file.required' => 'File is required',
             'file.file' => 'Uploaded file is invalid',
-            'file.max' => 'File size exceeds maximum allowed size (' . env('MAX_FILE_SIZE', 15) . 'MB)',
+            'file.max' => 'File size exceeds maximum allowed size ('.env('MAX_FILE_SIZE', 15).'MB)',
             'caption.max' => 'Caption cannot exceed 1024 characters',
-            'order_id.exists' => 'Order not found'
+            'order_id.exists' => 'Order not found',
         ];
     }
 }

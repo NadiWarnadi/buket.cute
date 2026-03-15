@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Message extends Model
 {
@@ -22,6 +23,9 @@ class Message extends Model
         'is_incoming',
         'parsed',
         'parsed_at',
+        'media_path',
+        'media_url',
+        'file_name',
     ];
 
     protected $casts = [
@@ -47,14 +51,22 @@ class Message extends Model
     }
 
     /**
+     * Relasi dengan Media
+     */
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class, 'message_id');
+    }
+
+    /**
      * Scope: Get conversations (grouped by customer)
      * Return unique messages per customer dengan status dan last message time
      */
     public function scopeConversations($query)
     {
         return $query->selectRaw('MAX(messages.id) as id, customer_id, MAX(created_at) as created_at')
-                     ->groupBy('customer_id')
-                     ->orderByDesc('created_at');
+            ->groupBy('customer_id')
+            ->orderByDesc('created_at');
     }
 
     /**
@@ -63,7 +75,7 @@ class Message extends Model
     public function scopeByCustomer($query, $customerId)
     {
         return $query->where('customer_id', $customerId)
-                     ->orderBy('created_at', 'asc');
+            ->orderBy('created_at', 'asc');
     }
 
     /**

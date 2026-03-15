@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 class ProcessMessageWithFuzzyBot
 {
     protected FuzzyBotService $fuzzyBotService;
+
     protected WhatsAppService $whatsappService;
 
     public function __construct(
@@ -46,7 +47,7 @@ class ProcessMessageWithFuzzyBot
             ]);
 
             // If matched, prepare and send automatic response
-            if ($result['matched'] && !empty($result['response'])) {
+            if ($result['matched'] && ! empty($result['response'])) {
                 // Check if we should send automatic reply based on action
                 if ($this->shouldSendAutoReply($result['action'])) {
                     $this->sendAutoReply($message, $result);
@@ -80,8 +81,8 @@ class ProcessMessageWithFuzzyBot
     {
         // Don't auto-reply for certain actions
         $noAutoReplyActions = ['escalate', 'manual_review', 'pending'];
-        
-        return !in_array($action, $noAutoReplyActions);
+
+        return ! in_array($action, $noAutoReplyActions);
     }
 
     /**
@@ -101,7 +102,7 @@ class ProcessMessageWithFuzzyBot
                 Message::create([
                     'customer_id' => $message->customer_id,
                     'order_id' => $message->order_id,
-                    'message_id' => $replyResult['message_id'] ?? 'msg_' . time(),
+                    'message_id' => $replyResult['message_id'] ?? 'msg_'.time(),
                     'from' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
                     'to' => $message->from,
                     'body' => $result['response'],

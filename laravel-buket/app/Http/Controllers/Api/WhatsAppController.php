@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SendWhatsAppTextRequest;
 use App\Http\Requests\SendWhatsAppMediaRequest;
+use App\Http\Requests\SendWhatsAppTextRequest;
 use App\Models\Customer;
-use App\Models\Message;
 use App\Models\Media;
+use App\Models\Message;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -30,17 +30,18 @@ class WhatsAppController extends Controller
     {
         try {
             $status = $this->whatsappService->getStatus();
-            
+
             if ($status['success']) {
                 return response()->json($status, 200);
             }
-            
+
             return response()->json($status, 500);
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error checking status', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -48,7 +49,7 @@ class WhatsAppController extends Controller
     /**
      * Kirim pesan teks ke customer
      * POST /api/whatsapp/send-text
-     * 
+     *
      * Expected payload:
      * {
      *   "customer_id": 1,
@@ -66,14 +67,14 @@ class WhatsAppController extends Controller
             if (empty($customer->phone)) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Customer phone number not set'
+                    'error' => 'Customer phone number not set',
                 ], 422);
             }
 
             // Kirim pesan ke WhatsApp
             $result = $this->whatsappService->sendText($customer->phone, $validated['message']);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json($result, 500);
             }
 
@@ -81,7 +82,7 @@ class WhatsAppController extends Controller
             $message = Message::create([
                 'customer_id' => $customer->id,
                 'order_id' => $validated['order_id'] ?? null,
-                'message_id' => $result['message_id'] ?? 'msg_' . time(),
+                'message_id' => $result['message_id'] ?? 'msg_'.time(),
                 'from' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
                 'to' => $customer->phone,
                 'body' => $validated['message'],
@@ -103,15 +104,17 @@ class WhatsAppController extends Controller
 
         } catch (ValidationException $e) {
             Log::channel('whatsapp')->warning('Validation error in send text', $e->errors());
+
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error sending text message', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -119,7 +122,7 @@ class WhatsAppController extends Controller
     /**
      * Kirim media (gambar, video, dokumen) ke customer
      * POST /api/whatsapp/send-media
-     * 
+     *
      * Form data:
      * - customer_id: required, integer
      * - file: required, file
@@ -136,13 +139,13 @@ class WhatsAppController extends Controller
             if (empty($customer->phone)) {
                 return response()->json([
                     'success' => false,
-                    'error' => 'Customer phone number not set'
+                    'error' => 'Customer phone number not set',
                 ], 422);
             }
 
             $file = $request->file('file');
             $filePath = $file->store('whatsapp-uploads', 'local');
-            $fullPath = storage_path('app/' . $filePath);
+            $fullPath = storage_path('app/'.$filePath);
 
             // Kirim media ke WhatsApp
             $result = $this->whatsappService->sendMedia(
@@ -151,14 +154,14 @@ class WhatsAppController extends Controller
                 $validated['caption'] ?? null
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 // Hapus file jika gagal
                 @unlink($fullPath);
+
                 return response()->json($result, 500);
             }
 
             // Dapatkan atau buat conversation (1 customer = 1 conversation only)
-    
 
             // Tentukan media type
             $mimeType = $file->getMimeType();
@@ -166,18 +169,18 @@ class WhatsAppController extends Controller
 
             // Simpan pesan media ke database
             $message = Message::create([
-            
+
                 'customer_id' => $customer->id,
                 'order_id' => $validated['order_id'] ?? null,
-                'message_id' => $result['message_id'] ?? 'msg_' . time(),
+                'message_id' => $result['message_id'] ?? 'msg_'.time(),
                 'from' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
                 'to' => $customer->phone,
-                'body' => $validated['caption'] ?? '[' . strtoupper($mediaType) . ']',
+                'body' => $validated['caption'] ?? '['.strtoupper($mediaType).']',
                 'type' => $mediaType,
                 'status' => 'sent',
                 'is_incoming' => false,
                 'parsed' => true,
-                'parsed_at' => now()
+                'parsed_at' => now(),
             ]);
 
             // Simpan info media
@@ -187,16 +190,14 @@ class WhatsAppController extends Controller
                 'file_name' => $file->getClientOriginalName(),
                 'file_type' => $mediaType,
                 'file_size' => $file->getSize(),
-                'mime_type' => $mimeType
+                'mime_type' => $mimeType,
             ]);
-
-           
 
             Log::channel('whatsapp')->info('Outgoing media message', [
                 'message_id' => $message->id,
                 'media_id' => $media->id,
                 'customer_id' => $customer->id,
-                'type' => $mediaType
+                'type' => $mediaType,
             ]);
 
             return response()->json([
@@ -204,20 +205,22 @@ class WhatsAppController extends Controller
                 'message_id' => $message->id,
                 'media_id' => $media->id,
                 'customer_id' => $customer->id,
-              
+
             ], 201);
 
         } catch (ValidationException $e) {
             Log::channel('whatsapp')->warning('Validation error in send media', $e->errors());
+
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error sending media', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -225,7 +228,7 @@ class WhatsAppController extends Controller
     /**
      * Get conversations list (grouped by customer)
      * GET /api/whatsapp/conversations
-     * 
+     *
      * Query params:
      * - status: optional (active, archived, closed)
      * - limit: optional, default 20
@@ -243,33 +246,34 @@ class WhatsAppController extends Controller
                 }
                 $query->orderByDesc('created_at');
             }])
-            ->whereHas('messages', function ($query) use ($status) {
-                if ($status) {
-                    $query->where('chat_status', $status);
-                }
-            })
-            ->orderByDesc('updated_at')
-            ->paginate($limit);
+                ->whereHas('messages', function ($query) use ($status) {
+                    if ($status) {
+                        $query->where('chat_status', $status);
+                    }
+                })
+                ->orderByDesc('updated_at')
+                ->paginate($limit);
 
             return response()->json([
                 'success' => true,
-                'data' => $customers->map(fn($customer) => [
+                'data' => $customers->map(fn ($customer) => [
                     'id' => $customer->id,
                     'name' => $customer->name,
                     'phone' => $customer->phone,
                     'status' => $customer->getChatStatus(),
                     'last_message' => $customer->getLastMessage(),
-                    'message_count' => $customer->messages->count()
-                ])
+                    'message_count' => $customer->messages->count(),
+                ]),
             ], 200);
 
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error fetching conversations', [
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -282,7 +286,7 @@ class WhatsAppController extends Controller
     {
         try {
             $customer = Customer::findOrFail($customerId);
-            
+
             $messages = Message::where('customer_id', $customerId)
                 ->orderByDesc('created_at')
                 ->paginate($request->get('limit', 50));
@@ -290,16 +294,17 @@ class WhatsAppController extends Controller
             return response()->json([
                 'success' => true,
                 'customer_id' => $customerId,
-                'data' => $messages
+                'data' => $messages,
             ], 200);
 
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error fetching conversation messages', [
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -321,17 +326,18 @@ class WhatsAppController extends Controller
                     'phone' => $customer->phone,
                     'status' => $customer->getChatStatus(),
                     'messages' => $customer->messages,
-                    'message_count' => $customer->messages->count()
-                ]
+                    'message_count' => $customer->messages->count(),
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error fetching customer conversation', [
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -348,6 +354,7 @@ class WhatsAppController extends Controller
         } elseif (strpos($mimeType, 'audio') !== false) {
             return 'audio';
         }
+
         return 'document';
     }
 }

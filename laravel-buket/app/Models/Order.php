@@ -58,7 +58,7 @@ class Order extends Model
      */
     public function getStatusLabel(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'Pending',
             'processed' => 'Diproses',
             'completed' => 'Selesai',
@@ -72,7 +72,7 @@ class Order extends Model
      */
     public function getStatusColor(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'warning',
             'processed' => 'info',
             'completed' => 'success',

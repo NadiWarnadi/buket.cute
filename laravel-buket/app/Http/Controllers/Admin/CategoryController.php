@@ -2,19 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Str;
 
 class CategoryController extends Controller
-{   
+{
     /**
      * Display a listing of the categories.
      */
     public function index()
     {
         $categories = Category::with('products')->paginate(15);
+
         return view('admin.categories.index', compact('categories'));
     }
 
@@ -31,10 +32,10 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-           $request->merge([
-        'slug' => Str::slug($request->name),
-    ]);
-    
+        $request->merge([
+            'slug' => Str::slug($request->name),
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories',
             'slug' => 'required|string|unique:categories,slug',
@@ -44,7 +45,7 @@ class CategoryController extends Controller
         Category::create($validated);
 
         return redirect()->route('admin.categories.index')
-                        ->with('success', 'Kategori berhasil ditambahkan.');
+            ->with('success', 'Kategori berhasil ditambahkan.');
     }
 
     /**
@@ -53,6 +54,7 @@ class CategoryController extends Controller
     public function show(Category $category)
     {
         $category->load('products');
+
         return view('admin.categories.show', compact('category'));
     }
 
@@ -70,14 +72,14 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
+            'name' => 'required|string|max:255|unique:categories,name,'.$category->id,
             'description' => 'nullable|string',
         ]);
 
         $category->update($validated);
 
         return redirect()->route('admin.categories.index')
-                        ->with('success', 'Kategori berhasil diperbarui.');
+            ->with('success', 'Kategori berhasil diperbarui.');
     }
 
     /**
@@ -88,12 +90,12 @@ class CategoryController extends Controller
         // Check if category has products
         if ($category->products()->count() > 0) {
             return redirect()->route('admin.categories.index')
-                            ->with('error', 'Tidak dapat menghapus kategori yang memiliki produk.');
+                ->with('error', 'Tidak dapat menghapus kategori yang memiliki produk.');
         }
 
         $category->delete();
 
         return redirect()->route('admin.categories.index')
-                        ->with('success', 'Kategori berhasil dihapus.');
+            ->with('success', 'Kategori berhasil dihapus.');
     }
 }

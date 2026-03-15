@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
+use App\Models\Ingredient;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
-use App\Models\Ingredient;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
@@ -25,7 +25,7 @@ class PurchaseController extends Controller
         }
 
         $sort = $request->sort ?? 'latest';
-        $query = match($sort) {
+        $query = match ($sort) {
             'supplier' => $query->orderBy('supplier', 'asc'),
             'oldest' => $query->orderBy('created_at', 'asc'),
             'latest' => $query->orderBy('created_at', 'desc'),
@@ -43,6 +43,7 @@ class PurchaseController extends Controller
     public function create()
     {
         $ingredients = Ingredient::orderBy('name')->get();
+
         return view('admin.purchases.create', compact('ingredients'));
     }
 
@@ -103,10 +104,11 @@ class PurchaseController extends Controller
             DB::commit();
 
             return redirect()->route('admin.purchases.show', $purchase)
-                            ->with('success', 'Pembelian bahan berhasil dicatat.');
+                ->with('success', 'Pembelian bahan berhasil dicatat.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
@@ -116,6 +118,7 @@ class PurchaseController extends Controller
     public function show(Purchase $purchase)
     {
         $purchase->load('items.ingredient');
+
         return view('admin.purchases.show', compact('purchase'));
     }
 
@@ -126,6 +129,7 @@ class PurchaseController extends Controller
     {
         $purchase->load('items');
         $ingredients = Ingredient::orderBy('name')->get();
+
         return view('admin.purchases.edit', compact('purchase', 'ingredients'));
     }
 
@@ -152,8 +156,8 @@ class PurchaseController extends Controller
                 $ingredient->save();
 
                 StockMovement::where('purchase_id', $purchase->id)
-                            ->where('ingredient_id', $oldItem->ingredient_id)
-                            ->delete();
+                    ->where('ingredient_id', $oldItem->ingredient_id)
+                    ->delete();
             }
 
             // Hapus items lama
@@ -199,10 +203,11 @@ class PurchaseController extends Controller
             DB::commit();
 
             return redirect()->route('admin.purchases.show', $purchase)
-                            ->with('success', 'Pembelian berhasil diperbarui.');
+                ->with('success', 'Pembelian berhasil diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 
@@ -234,10 +239,11 @@ class PurchaseController extends Controller
             DB::commit();
 
             return redirect()->route('admin.purchases.index')
-                            ->with('success', 'Pembelian berhasil dihapus dan stok dikembalikan.');
+                ->with('success', 'Pembelian berhasil dihapus dan stok dikembalikan.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan: '.$e->getMessage());
         }
     }
 }

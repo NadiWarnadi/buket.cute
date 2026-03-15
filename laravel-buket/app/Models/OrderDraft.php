@@ -21,7 +21,6 @@ class OrderDraft extends Model
         'expires_at' => 'datetime',
     ];
 
-
     /**
      * Relasi dengan Customer
      */

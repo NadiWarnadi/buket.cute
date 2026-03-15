@@ -15,10 +15,10 @@ class FuzzyBotService
     {
         // Normalize message
         $normalizedMessage = $this->normalizeText($message);
-        
+
         // Get all active rules
         $rules = FuzzyRule::where('is_active', true)->get();
-        
+
         if ($rules->isEmpty()) {
             return [
                 'matched' => false,
@@ -34,7 +34,7 @@ class FuzzyBotService
         // Calculate confidence score for each rule
         foreach ($rules as $rule) {
             $confidence = $this->calculateConfidence($normalizedMessage, $rule);
-            
+
             if ($confidence >= $rule->confidence_threshold) {
                 $matches[] = [
                     'rule' => $rule,
@@ -54,7 +54,7 @@ class FuzzyBotService
         }
 
         // Sort by confidence descending and get the best match
-        usort($matches, fn($a, $b) => $b['confidence'] <=> $a['confidence']);
+        usort($matches, fn ($a, $b) => $b['confidence'] <=> $a['confidence']);
         $bestMatch = $matches[0];
         $rule = $bestMatch['rule'];
 
@@ -83,7 +83,7 @@ class FuzzyBotService
         // Keyword matching
         foreach ($patterns['keywords'] as $keyword) {
             $keyword = $this->normalizeText($keyword);
-            
+
             if (stripos($message, $keyword) !== false) {
                 $scores[] = 1.0; // Exact match
             } else {
@@ -126,10 +126,10 @@ class FuzzyBotService
         $parts = array_map('trim', explode('|', $patternString));
 
         foreach ($parts as $part) {
-            if (!empty($part)) {
+            if (! empty($part)) {
                 // Check if it's a regex (surrounded by / /)
                 if (preg_match('~^/(.+)/([imsxADSUXJu]*)$~', $part, $matches)) {
-                    $regex[] = '~' . $matches[1] . '~' . ($matches[2] ?? '');
+                    $regex[] = '~'.$matches[1].'~'.($matches[2] ?? '');
                 } else {
                     $keywords[] = $part;
                 }
@@ -153,6 +153,7 @@ class FuzzyBotService
         }
 
         $distance = levenshtein($str1, $str2);
+
         return 1 - ($distance / $maxLen);
     }
 
@@ -163,11 +164,11 @@ class FuzzyBotService
     {
         // Convert to lowercase
         $text = strtolower($text);
-        
+
         // Remove extra whitespace
         $text = preg_replace('/\s+/', ' ', $text);
         $text = trim($text);
-        
+
         // Remove special characters but keep space
         $text = preg_replace('/[^a-z0-9\s]/', '', $text);
 

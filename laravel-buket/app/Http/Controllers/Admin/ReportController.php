@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Order;
+use App\Http\Controllers\Controller;
 use App\Models\Ingredient;
 use App\Models\Message;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use App\Models\Order;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -19,43 +19,43 @@ class ReportController extends Controller
     {
         $startDate = $request->start_date ? Carbon::createFromFormat('Y-m-d', $request->start_date) : Carbon::now()->startOfMonth();
         $endDate = $request->end_date ? Carbon::createFromFormat('Y-m-d', $request->end_date) : Carbon::now()->endOfDay();
-          
+
         $productSales = collect([]);
-       // ini untuk keranggka ketika data kosong
+        // ini untuk keranggka ketika data kosong
         $orders = Order::with('customer')
-        ->whereBetween('created_at', [$startDate, $endDate])
-        ->latest()
-        ->paginate(10);
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->latest()
+            ->paginate(10);
         // Statistik umum
         $totalOrders = Order::whereBetween('created_at', [$startDate, $endDate])->count();
         $totalRevenue = Order::whereBetween('created_at', [$startDate, $endDate])->sum('total_price');
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 
         // Order status breakdown
-     $statusBreakdown = Order::whereBetween('created_at', [$startDate, $endDate])
-    ->groupBy('status')
-    ->selectRaw('status, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
-    ->get();
+        $statusBreakdown = Order::whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('status')
+            ->selectRaw('status, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
+            ->get();
 
         // Daily sales data untuk chart
-    $dailySales = Order::whereBetween('created_at', [$startDate, $endDate])
-    ->groupByRaw('DATE(created_at)') // Gunakan groupByRaw
-    ->selectRaw('DATE(created_at) as date, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
-    ->orderBy('date')
-    ->get();
+        $dailySales = Order::whereBetween('created_at', [$startDate, $endDate])
+            ->groupByRaw('DATE(created_at)') // Gunakan groupByRaw
+            ->selectRaw('DATE(created_at) as date, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
+            ->orderBy('date')
+            ->get();
 
         // Top customers
-      $topCustomers = Order::whereBetween('created_at', [$startDate, $endDate])
-    ->with('customer')
-    ->groupBy('customer_id')
-    ->selectRaw('customer_id, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
-    ->orderByDesc('total')
-    ->limit(10)
-    ->get();
+        $topCustomers = Order::whereBetween('created_at', [$startDate, $endDate])
+            ->with('customer')
+            ->groupBy('customer_id')
+            ->selectRaw('customer_id, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get();
 
         return view('admin.reports.sales', compact(
             'orders',
-             'productSales',
+            'productSales',
             'totalOrders',
             'totalRevenue',
             'avgOrderValue',
@@ -71,9 +71,9 @@ class ReportController extends Controller
      * Stock Report - Laporan Stok Bahan Baku
      */
     public function stock(Request $request)
-    {   
-        // stok produk 
-          $products = \App\Models\Product::orderBy('stock')->take(5)->get();
+    {
+        // stok produk
+        $products = \App\Models\Product::orderBy('stock')->take(5)->get();
         // bahan bahan
         $ingredients = Ingredient::query();
 
@@ -97,7 +97,7 @@ class ReportController extends Controller
         // Stock movements untuk month ini
         $monthlyMovements = \App\Models\StockMovement::whereBetween('created_at', [
             Carbon::now()->startOfMonth(),
-            Carbon::now()->endOfMonth()
+            Carbon::now()->endOfMonth(),
         ])
             ->groupBy('ingredient_id')
             ->select('ingredient_id', DB::raw('count(*) as count'))
@@ -133,9 +133,9 @@ class ReportController extends Controller
             ->groupBy('chat_status')
             ->select('chat_status', DB::raw('count(*) as count'))
             ->get()
-            ->map(fn($item) => (object)[
+            ->map(fn ($item) => (object) [
                 'status' => $item->chat_status,
-                'count' => $item->count
+                'count' => $item->count,
             ]);
 
         // Active conversations - get customers with latest message chat_status = active
@@ -145,13 +145,13 @@ class ReportController extends Controller
                 ->orderByDesc('created_at')
                 ->limit(1);
         }])
-        ->whereHas('messages', function ($query) use ($startDate, $endDate) {
-            $query->whereBetween('created_at', [$startDate, $endDate])
-                ->where('chat_status', 'active');
-        })
-        ->orderByDesc('updated_at')
-        ->limit(10)
-        ->get();
+            ->whereHas('messages', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate])
+                    ->where('chat_status', 'active');
+            })
+            ->orderByDesc('updated_at')
+            ->limit(10)
+            ->get();
 
         // Daily chat messages
         $dailyMessages = Message::whereBetween('created_at', [$startDate, $endDate])

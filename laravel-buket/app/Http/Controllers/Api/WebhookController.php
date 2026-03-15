@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\WhatsAppMessageReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Message;
-use App\Events\WhatsAppMessageReceived;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -39,23 +39,24 @@ class WebhookController extends Controller
             ]);
 
             // Extract phone number - try all possible sources
-            $phoneNumber = $validated['sender_number'] 
-                ?? $validated['from'] 
+            $phoneNumber = $validated['sender_number']
+                ?? $validated['from']
                 ?? $request->input('from')
                 ?? $request->input('sender_number');
-            
+
             if (empty($phoneNumber)) {
                 Log::channel('whatsapp')->warning('No phone number found in webhook payload', ['payload' => $validated]);
+
                 return response()->json(['error' => 'No phone number found in payload'], 422);
             }
-            
+
             // Clean phone number (remove @ and other characters)
             $phoneNumber = preg_replace('/[^0-9+]/', '', $phoneNumber);
 
             // Extract message body - try multiple field names
-            $messageBody = $validated['body'] 
-                ?? $validated['content'] 
-                ?? $validated['message'] 
+            $messageBody = $validated['body']
+                ?? $validated['content']
+                ?? $validated['message']
                 ?? '';
 
             // Get or create customer
@@ -68,14 +69,14 @@ class WebhookController extends Controller
             );
 
             // Only create message if type is text or has body content
-            if (!empty($messageBody) || in_array($validated['type'], ['image', 'video', 'document', 'audio'])) {
+            if (! empty($messageBody) || in_array($validated['type'], ['image', 'video', 'document', 'audio'])) {
                 // Create message directly (no conversation table)
                 $message = Message::create([
                     'customer_id' => $customer->id,
-                    'message_id' => $validated['message_id'] ?? 'msg_' . time(),
+                    'message_id' => $validated['message_id'] ?? 'msg_'.time(),
                     'from' => $phoneNumber,
                     'to' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
-                    'body' => $messageBody ?: '[' . strtoupper($validated['type']) . ' Media]',
+                    'body' => $messageBody ?: '['.strtoupper($validated['type']).' Media]',
                     'type' => $validated['type'],
                     'status' => 'pending',
                     'is_incoming' => true,
@@ -114,12 +115,14 @@ class WebhookController extends Controller
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::channel('whatsapp')->error('Validation error in webhook', $e->errors());
+
             return response()->json(['error' => $e->errors()], 422);
         } catch (\Exception $e) {
             Log::channel('whatsapp')->error('Error processing webhook', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json(['error' => 'Internal server error'], 500);
         }
     }

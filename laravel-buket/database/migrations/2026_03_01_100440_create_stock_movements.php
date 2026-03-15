@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-    Schema::create('stock_movements', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('ingredient_id')->constrained();
-    $table->enum('type', ['in', 'out']);
-    $table->integer('quantity');
-    $table->text('description')->nullable();
-    $table->nullableMorphs('reference'); // reference_type & reference_id
-    $table->timestamps();
-});
+        Schema::create('stock_movements', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('ingredient_id')->constrained();
+            $table->enum('type', ['in', 'out']);
+            $table->integer('quantity');
+            $table->text('description')->nullable();
+            $table->nullableMorphs('reference'); // reference_type & reference_id
+            $table->timestamps();
+        });
     }
 
     /**
