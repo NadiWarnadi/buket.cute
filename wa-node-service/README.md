@@ -1,5 +1,5 @@
 
-# WA Gateway Node.js Service 🚀
+# WA Gateway Node.js Service 
 Layanan pengiriman pesan WhatsApp berbasis **Node.js** menggunakan library **Baileys** (@whiskeysockets/baileys). Didesain untuk terintegrasi secara aman dengan backend **Laravel 12**.
 ## 📁 Struktur Folder
 Pemisahan logika dilakukan agar kode lebih modular, mudah dikembangkan (*scalable*), dan rapi:
@@ -53,6 +53,6 @@ Sistem ini menggunakan arsitektur modern untuk memastikan performa yang stabil:
 * qrcode-terminal: Menampilkan QR Code di terminal.
 
 
-Apakah ada **fitur spesifik** (seperti fitur Auto-Reply atau Blast) yang ingin kamu tambahkan ke dalam penjelasan README tersebut?
+
 
 
