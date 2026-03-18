@@ -44,6 +44,7 @@ class FuzzyRuleController extends Controller
             $sortOrder = $request->input('sort_order', 'desc');
             $query->orderBy($sortBy, $sortOrder);
 
+            
             $rules = $query->paginate($request->input('per_page', 15));
 
             return response()->json([
