@@ -77,6 +77,9 @@
             <a href="{{ route('admin.chat.index') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.chat.index' || Route::currentRouteName() === 'admin.chat.show') active @endif">
                 <i class="bi bi-chat-dots"></i> Chat
             </a>
+            <a href="{{ route('admin.fuzzy-rules.index') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.fuzzy-rules.index' || Route::currentRouteName() === 'admin.fuzzy-rules.create' || Route::currentRouteName() === 'admin.fuzzy-rules.edit' || Route::currentRouteName() === 'admin.fuzzy-rules.show') active @endif">
+                <i class="bi bi-robot"></i> Fuzzy Rules
+            </a>
             <div class="sidebar-item-group">
                 <a href="#reportDropdown" class="sidebar-item" data-bs-toggle="collapse" aria-expanded="false">
                     <i class="bi bi-file-earmark-text"></i> Laporan

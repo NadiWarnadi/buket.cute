@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\FuzzyRule;
 use App\Models\Order;
 use App\Models\Product;
 
@@ -28,6 +29,10 @@ class DashboardController extends Controller
         // Count active products
         $activeProducts = Product::where('is_active', true)->count();
 
+        // Fuzzy Rules statistics
+        $totalFuzzyRules = FuzzyRule::count();
+        $activeFuzzyRules = FuzzyRule::where('is_active', true)->count();
+
         // Get recent orders
         $recentOrders = Order::latest()->limit(5)->get();
 
@@ -38,6 +43,8 @@ class DashboardController extends Controller
             'totalCategories',
             'lowStockProducts',
             'activeProducts',
+            'totalFuzzyRules',
+            'activeFuzzyRules',
             'recentOrders'
         ));
     }

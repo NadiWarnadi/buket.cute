@@ -91,6 +91,38 @@
             </div>
         </div>
     </div>
+
+    <div class="col-12 col-sm-6 col-lg-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <p class="text-muted mb-0">Total Fuzzy Rules</p>
+                        <h4 class="mb-0">{{ $totalFuzzyRules }}</h4>
+                    </div>
+                    <div class="text-danger" style="font-size: 2rem;">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <p class="text-muted mb-0">Rules Aktif</p>
+                        <h4 class="mb-0">{{ $activeFuzzyRules }}</h4>
+                    </div>
+                    <div class="text-purple" style="font-size: 2rem; color: #9966cc;">
+                        <i class="bi bi-check-all"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Quick Actions -->
@@ -155,6 +187,11 @@
                     <div class="col-12 col-sm-6 col-lg-3">
                         <a href="{{ route('admin.settings.index') }}" class="btn btn-outline-warning w-100">
                             <i class="bi bi-gear"></i> Pengaturan Toko
+                        </a>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <a href="{{ route('admin.fuzzy-rules.index') }}" class="btn btn-outline-danger w-100">
+                            <i class="bi bi-robot"></i> Fuzzy Rules
                         </a>
                     </div>
                 </div>

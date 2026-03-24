@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\FuzzyRuleController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
@@ -81,6 +82,14 @@ Route::middleware(['auth'])->group(function () {
             Route::get('chat', [ReportController::class, 'chat'])->name('reports.chat');
             Route::get('export-sales', [ReportController::class, 'exportSales'])->name('reports.export-sales');
         });
+
+        // Fuzzy Rules
+        Route::resource('fuzzy-rules', FuzzyRuleController::class);
+        Route::patch('fuzzy-rules/{fuzzyRule}/toggle', [FuzzyRuleController::class, 'toggle'])->name('fuzzy-rules.toggle');
+        Route::post('fuzzy-rules/test-pattern', [FuzzyRuleController::class, 'testPattern'])->name('fuzzy-rules.test-pattern');
+        Route::get('fuzzy-rules/import-form', [FuzzyRuleController::class, 'importForm'])->name('fuzzy-rules.import-form');
+        Route::post('fuzzy-rules/import', [FuzzyRuleController::class, 'import'])->name('fuzzy-rules.import');
+        Route::get('fuzzy-rules/export', [FuzzyRuleController::class, 'export'])->name('fuzzy-rules.export');
 
         // Settings
         Route::prefix('settings')->group(function () {
