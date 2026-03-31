@@ -8,66 +8,38 @@ use Illuminate\Support\Facades\Log;
 class FuzzyBotService
 {
     /**
-     * Process incoming message and find best matching rule
-     * Using fuzzy matching with confidence scores
+     * Process incoming message with context awareness
+     * Anti N+1: Uses eager loading and caching
      */
-    public function processMessage(string $message): array
+    public function processMessageWithContext(string $message, ?string $currentContext = null): array
     {
-        // Normalize message
-        $normalizedMessage = $this->normalizeText($message);
+        // Try to find matching rule (uses static method from FuzzyRule)
+        $rule = FuzzyRule::findMatchingRule($message, $currentContext);
 
-        // Get all active rules
-        $rules = FuzzyRule::where('is_active', true)->get();
-
-        if ($rules->isEmpty()) {
+        if (!$rule) {
             return [
                 'matched' => false,
                 'rule_id' => null,
                 'intent' => null,
                 'confidence' => 0,
                 'response' => null,
+                'action' => null,
+                'next_context' => null,
             ];
         }
 
-        $matches = [];
-
-        // Calculate confidence score for each rule
-        foreach ($rules as $rule) {
-            $confidence = $this->calculateConfidence($normalizedMessage, $rule);
-
-            if ($confidence >= $rule->confidence_threshold) {
-                $matches[] = [
-                    'rule' => $rule,
-                    'confidence' => $confidence,
-                ];
-            }
-        }
-
-        if (empty($matches)) {
-            return [
-                'matched' => false,
-                'rule_id' => null,
-                'intent' => null,
-                'confidence' => 0,
-                'response' => null,
-            ];
-        }
-
-        // Sort by confidence descending and get the best match
-        usort($matches, fn ($a, $b) => $b['confidence'] <=> $a['confidence']);
-        $bestMatch = $matches[0];
-        $rule = $bestMatch['rule'];
-
-        // Generate response
-        $response = $this->generateResponse($rule, $normalizedMessage);
+        $confidence = FuzzyRule::calculateSimilarity($message, $rule->pattern);
+        $response = $this->generateResponse($rule, $message);
 
         return [
             'matched' => true,
             'rule_id' => $rule->id,
             'intent' => $rule->intent,
             'action' => $rule->action,
-            'confidence' => round($bestMatch['confidence'], 2),
+            'confidence' => $confidence,
             'response' => $response,
+            'next_context' => $rule->next_context,
+            'context_slug' => $rule->context_slug,
         ];
     }
 

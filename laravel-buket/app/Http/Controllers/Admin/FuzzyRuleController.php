@@ -57,9 +57,15 @@ class FuzzyRuleController extends Controller
             'order' => 'Proses Pesanan',
             'category' => 'Kategorisasi Pesan',
             'pending' => 'Tandai Pending',
+            'show_product' => 'Tampilkan Produk',
+            'set_qty' => 'Atur Jumlah',
+            'set_address' => 'Atur Alamat Pengiriman',
+            'confirm_order' => 'Konfirmasi Pesanan',
         ];
 
-        return view('admin.fuzzy-rules.create', compact('actions'));
+        $contexts = FuzzyRule::getAllContexts();
+
+        return view('admin.fuzzy-rules.create', compact('actions', 'contexts'));
     }
 
     /**
@@ -73,6 +79,9 @@ class FuzzyRuleController extends Controller
             'confidence_threshold' => 'required|numeric|min:0|max:1',
             'action' => 'required|string|max:100',
             'response_template' => 'nullable|string',
+            'context_slug' => 'nullable|string|max:100',
+            'next_context' => 'nullable|string|max:100',
+            'priority' => 'nullable|integer|min:0|max:100',
             'is_active' => 'boolean',
         ], [
             'intent.required' => 'Nama intent harus diisi',
@@ -84,6 +93,11 @@ class FuzzyRuleController extends Controller
             'confidence_threshold.max' => 'Confidence threshold maksimal 1',
             'action.required' => 'Aksi harus dipilih',
         ]);
+
+        // Set default priority if not provided
+        if (!isset($validated['priority'])) {
+            $validated['priority'] = 0;
+        }
 
         FuzzyRule::create($validated);
 
@@ -103,9 +117,15 @@ class FuzzyRuleController extends Controller
             'order' => 'Proses Pesanan',
             'category' => 'Kategorisasi Pesan',
             'pending' => 'Tandai Pending',
+            'show_product' => 'Tampilkan Produk',
+            'set_qty' => 'Atur Jumlah',
+            'set_address' => 'Atur Alamat Pengiriman',
+            'confirm_order' => 'Konfirmasi Pesanan',
         ];
 
-        return view('admin.fuzzy-rules.edit', compact('fuzzyRule', 'actions'));
+        $contexts = FuzzyRule::getAllContexts();
+
+        return view('admin.fuzzy-rules.edit', compact('fuzzyRule', 'actions', 'contexts'));
     }
 
     /**
@@ -119,6 +139,9 @@ class FuzzyRuleController extends Controller
             'confidence_threshold' => 'required|numeric|min:0|max:1',
             'action' => 'required|string|max:100',
             'response_template' => 'nullable|string',
+            'context_slug' => 'nullable|string|max:100',
+            'next_context' => 'nullable|string|max:100',
+            'priority' => 'nullable|integer|min:0|max:100',
             'is_active' => 'boolean',
         ], [
             'intent.required' => 'Nama intent harus diisi',
@@ -130,6 +153,11 @@ class FuzzyRuleController extends Controller
             'confidence_threshold.max' => 'Confidence threshold maksimal 1',
             'action.required' => 'Aksi harus dipilih',
         ]);
+
+        // Set default priority if not provided
+        if (!isset($validated['priority'])) {
+            $validated['priority'] = 0;
+        }
 
         $fuzzyRule->update($validated);
 

@@ -7,7 +7,7 @@
 <section class="hero mb-0">
     <div class="container">
         <h1>🌸 Buket Cute</h1>
-        <p>Rangkaian bunga segar dan hamper berkualitas untuk semua momen spesial Anda</p>
+        <p>Rangkaian bunga  berkualitas untuk semua momen spesial Anda</p>
         <a href="{{ route('public.catalog') }}" class="btn btn-primary-custom">
             Lihat Katalog Produk
         </a>
@@ -84,7 +84,7 @@
             <div class="col-md-4 text-center">
                 <div class="mb-3" style="font-size: 3rem;">⚡</div>
                 <h5>Pengiriman Cepat</h5>
-                <p class="text-muted">Pengiriman gratis untuk area tertentu dalam 2-4 jam setelah pemesanan.</p>
+                <p class="text-muted">Pengiriman gratis untuk area tertentu dalam 2-4 Hari setelah pemesanan.</p>
             </div>
             <div class="col-md-4 text-center">
                 <div class="mb-3" style="font-size: 3rem;">🎨</div>

@@ -3,10 +3,10 @@
  * Fokus: Manajemen koneksi Baileys, Low RAM, & LID Mapping
  */
 
-const { 
-    default: makeWASocket, 
-    useMultiFileAuthState, 
-    DisconnectReason, 
+const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    DisconnectReason,
     fetchLatestBaileysVersion,
     makeCacheableSignalKeyStore
 } = require('@whiskeysockets/baileys');
@@ -23,7 +23,7 @@ class WhatsAppService {
         this.onMessageCallback = null;
         // Logger pino disetel ke 'info' agar kalian bisa debug, 
         // tapi 'silent' jika ingin hemat CPU maksimal.
-        this.logger = pino({ level: 'info' }); 
+        this.logger = pino({ level: 'info' });
     }
 
     async init() {
@@ -60,10 +60,10 @@ class WhatsAppService {
             }
 
             if (connection === 'close') {
-                const shouldReconnect = (lastDisconnect.error instanceof Boom) 
-                    ? lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut 
+                const shouldReconnect = (lastDisconnect.error instanceof Boom)
+                    ? lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut
                     : true;
-                
+
                 console.log('[Warn] Koneksi terputus:', lastDisconnect.error?.message);
                 if (shouldReconnect) {
                     console.log('[Retry] Mencoba menyambung ulang...');
@@ -89,7 +89,7 @@ class WhatsAppService {
                 try {
                     // Gunakan parser kita untuk mencari nomor asli (PN)
                     const parsedData = await parseIncomingMessage(this.sock, msg);
-                    
+
                     // Gabungkan dengan konten pesan mentah untuk diproses di webhook
                     const fullPayload = {
                         ...parsedData,
@@ -124,27 +124,48 @@ class WhatsAppService {
         }
     }
     async sendMedia(to, filePath, type, caption = '') {
-    try {
-        const jid = `${to}@s.whatsapp.net`;
-        const fileBuffer = require('fs').readFileSync(filePath);
-        
-        let payload = {};
-        if (type === 'image') {
-            payload = { image: fileBuffer, caption: caption };
-        } else {
-            payload = { 
-                document: fileBuffer, 
-                mimetype: 'application/pdf', // Bisa dibuat dinamis jika perlu
-                fileName: 'File-Chatbot', 
-                caption: caption 
+        try {
+            const jid = `${to}@s.whatsapp.net`;
+            const fileBuffer = require('fs').readFileSync(filePath);
+
+            let payload = {};
+            if (type === 'image') {
+                payload = { image: fileBuffer, caption: caption };
+            } else {
+                payload = {
+                    document: fileBuffer,
+                    mimetype: 'application/pdf', // Bisa dibuat dinamis jika perlu
+                    fileName: 'File-Chatbot',
+                    caption: caption
+                };
+            }
+
+            return await this.sock.sendMessage(jid, payload);
+        } catch (error) {
+            console.error('❌ Error di sendMedia:', error.message);
+            throw error;
+        }
+    }
+
+    // Get connection status
+    getConnectionStatus() {
+        if (!this.sock) {
+            return {
+                connected: false,
+                status: 'disconnected',
+                message: 'WhatsApp not initialized'
             };
         }
 
-        return await this.sock.sendMessage(jid, payload);
-    } catch (error) {
-        console.error('❌ Error di sendMedia:', error.message);
-        throw error;
+        const connectionState = this.sock.connectionState || {};
+        const isConnected = connectionState.connection === 'open';
+
+        return {
+            connected: isConnected,
+            status: connectionState.connection || 'unknown',
+            user: this.sock.user ? this.sock.user.id.split(':')[0] : null,
+            message: isConnected ? 'WhatsApp Connected' : 'WhatsApp Disconnected'
+        };
     }
-}
 }
 module.exports = WhatsAppService;

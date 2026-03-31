@@ -13,13 +13,21 @@ return new class extends Migration
     {
         Schema::create('fuzzy_rules', function (Blueprint $table) {
             $table->id();
-            $table->string('intent', 100);
-            $table->text('pattern'); // Regex/Keywords
-            $table->float('confidence_threshold');
-            $table->string('action', 100);
-            $table->text('response_template')->nullable();
+            $table->string('intent', 100)->unique();
+            $table->text('pattern'); // Keywords/Patterns separated by comma
+            $table->float('confidence_threshold')->default(0.6); // 60% similarity minimum
+            $table->string('action', 100); // e.g., 'reply', 'escalate', 'order', etc
+            $table->text('response_template')->nullable(); // Response message template
+            $table->string('context_slug')->nullable(); // Current conversation stage
+            $table->string('next_context')->nullable(); // Next stage to move to
+            $table->integer('priority')->default(0); // Higher = more priority
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            
+            // Indexes for fast searching
+            $table->index('context_slug');
+            $table->index('is_active');
+            $table->index('action');
         });
     }
 

@@ -47,7 +47,7 @@
                     </div>
                     <div class="d-flex justify-content-between">
                         <span>Total Percakapan:</span>
-                        <strong>{{ $customer->conversations->count() }}</strong>
+                       
                     </div>
                 </div>
 

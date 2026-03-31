@@ -79,7 +79,7 @@ class CustomerController extends Controller
     public function showByPhone($phone)
     {
         $customer = Customer::where('phone', $phone)->firstOrFail();
-        $customer->load(['orders', 'conversations']);
+        
 
         return view('admin.customers.show', compact('customer'));
     }
