@@ -170,7 +170,6 @@ class FuzzyRuleController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
     /**
      * Test fuzzy bot with a message
      * POST /api/fuzzy-rules/test
@@ -180,13 +179,22 @@ class FuzzyRuleController extends Controller
         try {
             $validated = $request->validate([
                 'message' => 'required|string',
+                'context' => 'nullable|string',
             ]);
 
-            $result = $this->fuzzyBotService->processMessage($validated['message']);
+            $message = $validated['message'];
+            $context = $request->input('context');
+
+            // PERBAIKAN 1: Tampung hasil service ke dalam variabel $result
+            $result = $this->fuzzyBotService->processMessageWithContext($message, $context);
 
             return response()->json([
                 'success' => true,
-                'input' => $validated['message'],
+                // PERBAIKAN 2: Susunan array input yang benar
+                'input' => [
+                    'message' => $message,
+                    'context' => $context
+                ],
                 'result' => $result,
             ]);
         } catch (ValidationException $e) {

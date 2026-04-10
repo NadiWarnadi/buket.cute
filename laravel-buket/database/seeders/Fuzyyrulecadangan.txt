@@ -1,0 +1,183 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\FuzzyRule;
+use Illuminate\Database\Seeder;
+
+class Fuzyyrulecadangan extends Seeder
+{
+    /**
+     * Run the database seeds.
+     * Seed fuzzy rules untuk order collection flow
+     * IMPORTANT: UpdateOrCreate untuk avoid duplicates dan allow updates
+     */
+    public function run(): void
+    {
+        $rules = [
+            // ========== GREETING & INITIAL ==========
+            [
+                'intent' => 'greeting',
+                'pattern' => 'halo|hai|hello|hey|salam|assalamualaikum|pagi|siang|sore|malam',
+                'confidence_threshold' => 0.6,
+                'action' => 'reply',
+                'response_template' => 'Halo ka 👋 Selamat datang di Buket Cute! Ada yang bisa kami bantu? Mau pesan buket atau lihat katalog?',
+                'context_slug' => null,
+                'next_context' => 'greeting_done',
+                'priority' => 10,
+                'is_active' => true,
+            ],
+
+            // ========== ORDER INTENT ==========
+            [
+                'intent' => 'order_start',
+                'pattern' => 'pesan|order|beli|ingin|mau|ambil|sewa|kasih|bikin|buatkan|memesan',
+                'confidence_threshold' => 0.7,
+                'action' => 'order',
+                'response_template' => null,
+                'context_slug' => null,
+                'next_context' => 'collecting_order',
+                'priority' => 50,
+                'is_active' => true,
+            ],
+
+            // ========== PRODUCT CATALOG ==========
+            [
+                'intent' => 'show_catalog',
+                'pattern' => 'katalog|lihat|produk|tersedia|ada|apa aja|pilihan|menu|daftar',
+                'confidence_threshold' => 0.7,
+                'action' => 'show_product',
+                'response_template' => 'Produk kami tersedia di katalog. Ketik nama produk yang Anda inginkan (contoh: Buket Merah, Hampers, Mix Bunga)',
+                'context_slug' => null,
+                'next_context' => 'selecting_product',
+                'priority' => 25,
+                'is_active' => true,
+            ],
+
+            // ========== PRICE INQUIRY ==========
+            [
+                'intent' => 'price_inquiry',
+                'pattern' => 'harga|berapa|price|cost|mahal|murah|diskon',
+                'confidence_threshold' => 0.7,
+                'action' => 'reply',
+                'response_template' => 'Harga berbeda tergantung produk. Silakan pilih produk terlebih dahulu atau lihat katalog kami untuk detail harga.',
+                'context_slug' => null,
+                'next_context' => null,
+                'priority' => 20,
+                'is_active' => true,
+            ],
+
+            // ========== QUANTITY PATTERNS ==========
+            [
+                'intent' => 'specify_quantity',
+                'pattern' => '/(\d+|satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh)\s+(biji|buket|pcs|piece|qty)/i',
+                'confidence_threshold' => 0.8,
+                'action' => 'set_qty',
+                'response_template' => null,
+                'context_slug' => 'collecting_quantity',
+                'next_context' => 'collecting_quantity',
+                'priority' => 40,
+                'is_active' => true,
+            ],
+
+            // ========== ADDRESS PATTERNS ==========
+            [
+                'intent' => 'specify_address',
+                'pattern' => 'alamat|kota|jalan|jl|jln|no|dst|kelurahan|desa|rt|rw|jakarta|bandung|surabaya|bali',
+                'confidence_threshold' => 0.7,
+                'action' => 'set_address',
+                'response_template' => null,
+                'context_slug' => 'collecting_address',
+                'next_context' => 'confirming',
+                'priority' => 35,
+                'is_active' => true,
+            ],
+
+            // ========== CONFIRMATION ==========
+            [
+                'intent' => 'confirm_yes',
+                'pattern' => 'iya|ya|ok|okay|okee|setuju|lanjut|confirm|oke|baik|benar|betul|jadi',
+                'confidence_threshold' => 0.75,
+                'action' => 'confirm_order',
+                'response_template' => null,
+                'context_slug' => 'confirming',
+                'next_context' => 'order_completed',
+                'priority' => 60,
+                'is_active' => true,
+            ],
+
+            [
+                'intent' => 'confirm_no',
+                'pattern' => 'tidak|tidak jadi|batal|ubah|ganti|cancel|no|nope|jangan|salah',
+                'confidence_threshold' => 0.75,
+                'action' => 'reply',
+                'response_template' => 'Baik ka, mari mulai ulang. Siapa nama lengkap Anda?',
+                'context_slug' => 'confirming',
+                'next_context' => 'collecting_name',
+                'priority' => 60,
+                'is_active' => true,
+            ],
+
+            // ========== HELP & SUPPORT ==========
+            [
+                'intent' => 'help',
+                'pattern' => 'bantuan|help|caranya|gimana|bingung|apa sih|info|bagaimana|tanya',
+                'confidence_threshold' => 0.7,
+                'action' => 'reply',
+                'response_template' => "Ini langkah-langkahnya ka:\n1️⃣ Sebutkan nama Anda\n2️⃣ Pilih produk yang diinginkan\n3️⃣ Tentukan jumlah pesanan\n4️⃣ Kasih alamat pengiriman\n5️⃣ Konfirmasi pesanan\n\nMau mulai?",
+                'context_slug' => null,
+                'next_context' => null,
+                'priority' => 15,
+                'is_active' => true,
+            ],
+
+            // ========== ESCALATE TO ADMIN ==========
+            [
+                'intent' => 'escalate_admin',
+                'pattern' => 'komplain|keluh|masalah|error|tidak puas|rusak|hilang|admin|operator|manager',
+                'confidence_threshold' => 0.7,
+                'action' => 'escalate',
+                'response_template' => 'Baik ka, saya akan hubungkan dengan admin kami. Mohon tunggu sebentar.',
+                'context_slug' => null,
+                'next_context' => null,
+                'priority' => 70,
+                'is_active' => true,
+            ],
+
+            // ========== CLOSING ==========
+            [
+                'intent' => 'closing',
+                'pattern' => 'terima kasih|thanks|bye|bye bye|dadah|sampai jumpa|exit',
+                'confidence_threshold' => 0.6,
+                'action' => 'reply',
+                'response_template' => 'Terima kasih sudah menghubungi kami! 😊 Sampai jumpa lagi! Jangan lupa follow Instagram kami.',
+                'context_slug' => null,
+                'next_context' => null,
+                'priority' => 1,
+                'is_active' => true,
+            ],
+
+            // ========== FALLBACK ==========
+            [
+                'intent' => 'default_fallback',
+                'pattern' => 'apa|siapa|yang|mana|kenapa|mengapa|itu|ini',
+                'confidence_threshold' => 0.3,
+                'action' => 'manual_review',
+                'response_template' => 'Maaf ka, kami kurang mengerti pesan Anda. Ketik "bantuan" untuk melihat panduan atau hubungi admin untuk bantuan lebih lanjut.',
+                'context_slug' => null,
+                'next_context' => null,
+                'priority' => 1,
+                'is_active' => true,
+            ],
+        ];
+
+        foreach ($rules as $rule) {
+            FuzzyRule::updateOrCreate(
+                ['intent' => $rule['intent']],
+                $rule
+            );
+        }
+
+        $this->command->info('✅ Fuzzy rules seeded successfully! Total: ' . count($rules) . ' rules');
+    }
+}

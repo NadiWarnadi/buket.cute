@@ -25,5 +25,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(FuzzyRuleSeeder::class);
+        $this->call(ProductSeeder::class);
     }
 }

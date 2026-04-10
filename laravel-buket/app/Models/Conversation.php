@@ -15,6 +15,7 @@ class Conversation extends Model
         'order_id',
         'subject',
         'status',
+        'current_context',
         'last_message_at',
     ];
 

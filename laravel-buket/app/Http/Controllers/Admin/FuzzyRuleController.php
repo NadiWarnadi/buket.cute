@@ -158,7 +158,7 @@ class FuzzyRuleController extends Controller
         if (!isset($validated['priority'])) {
             $validated['priority'] = 0;
         }
-
+        $validated['is_active'] = $request->has('is_active');
         $fuzzyRule->update($validated);
 
         return redirect()->route('admin.fuzzy-rules.index')
@@ -206,44 +206,56 @@ class FuzzyRuleController extends Controller
         $request->validate([
             'pattern' => 'required|string',
             'test_message' => 'required|string',
+            'confidence_threshold' => 'nullable|numeric|min:0|max:1',
         ]);
 
         try {
             $pattern = $request->input('pattern');
             $testMessage = $request->input('test_message');
-
+            $threshold = $request->input('confidence_threshold', 0.6);
             // Parse and test pattern
             $patterns = $this->parsePatterns($pattern);
             $matched = false;
+            $matchType = 'none';
 
             // Test keywords
-            foreach ($patterns['keywords'] as $keyword) {
-                if (stripos(strtolower($testMessage), strtolower($keyword)) !== false) {
-                    $matched = true;
-                    break;
-                }
-            }
+            // foreach ($patterns['keywords'] as $keyword) {
+            //     if (stripos(strtolower($testMessage), strtolower($keyword)) !== false) {
+            //         $matched = true;
+            //         break;
+            //     }
+            // }
 
             // Test regex if no keyword match
             if (!$matched) {
                 foreach ($patterns['regex'] as $regex) {
-                    try {
-                        if (preg_match($regex, $testMessage)) {
-                            $matched = true;
-                            break;
-                        }
-                    } catch (\Exception $e) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Error pada regex: ' . $e->getMessage(),
-                        ]);
-                    }
+            try {
+                if (preg_match($regex, $testMessage)) {
+                    $matched = true;
+                    $matchType = 'regex';
+                    break;
                 }
+            } catch (\Exception $e) {
+                return response()->json(['success' => false, 'message' => 'Regex Error: ' . $e->getMessage()]);
             }
-
+        }
+            }
+          // 3. CEK FUZZY (Logika Baru dari Model) jika Regex tidak match
+        $score = 0;
+        if (!$matched) {
+            $score = \App\Models\FuzzyRule::calculateSimilarity($testMessage, $pattern);
+            if ($score >= $threshold) {
+                $matched = true;
+                $matchType = 'fuzzy/keyword';
+            }
+        } else {
+            $score = 1.0; // Jika regex match, kita anggap confidence sempurna
+        }
             return response()->json([
                 'success' => true,
                 'matched' => $matched,
+                'match_type' => $matchType,
+                'confidence_score' => $score,
                 'keywords' => $patterns['keywords'],
                 'regex' => $patterns['regex'],
             ]);
@@ -305,14 +317,17 @@ class FuzzyRuleController extends Controller
 
             $imported = 0;
             foreach ($rules as $rule) {
-                FuzzyRule::create([
-                    'intent' => $rule['intent'] ?? '',
-                    'pattern' => $rule['pattern'] ?? '',
-                    'confidence_threshold' => $rule['confidence_threshold'] ?? 0.5,
-                    'action' => $rule['action'] ?? 'reply',
-                    'response_template' => $rule['response_template'] ?? null,
-                    'is_active' => $rule['is_active'] ?? true,
-                ]);
+            FuzzyRule::create([
+                'intent' => $rule['intent'] ?? '',
+                'pattern' => $rule['pattern'] ?? '',
+                'confidence_threshold' => $rule['confidence_threshold'] ?? 0.5,
+                'action' => $rule['action'] ?? 'reply',
+                'response_template' => $rule['response_template'] ?? null,
+                'context_slug' => $rule['context_slug'] ?? null, // Tambahkan ini
+                'next_context' => $rule['next_context'] ?? null, // Tambahkan ini
+                'priority' => $rule['priority'] ?? 0,           // Tambahkan ini
+                'is_active' => $rule['is_active'] ?? true,
+                 ]);
                 $imported++;
             }
 

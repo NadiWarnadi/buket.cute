@@ -286,3 +286,40 @@
                 font-size: 1.5rem;
             }
         }
+
+    /* Logo Styling */
+.brand-logo {
+    height: 3rem;              /* Sedikit lebih besar agar jelas */
+    width: auto;
+    margin-right: 10px;
+    object-fit: contain;
+    transition: transform 0.3s ease, filter 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); /* bayangan halus */
+}
+
+.brand-logo:hover {
+    transform: scale(1.08);    /* efek zoom saat hover */
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+}
+
+/* Navbar Brand agar teks dan logo sejajar */
+.navbar-brand {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;                  /* jarak natural antara logo dan teks */
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: var(--primary-color) !important;
+    letter-spacing: 0.5px;     /* sedikit spasi agar lebih modern */
+}
+
+/* Penyesuaian untuk tampilan Mobile */
+@media (max-width: 768px) {
+    .brand-logo {
+        height: 2.4rem;        /* lebih kecil di HP */
+        margin-right: 6px;
+    }
+    .navbar-brand {
+        font-size: 1.3rem;
+    }
+}

@@ -39,67 +39,84 @@ class WebhookController extends Controller
             ]);
 
             // Extract phone number - try all possible sources
-            $phoneNumber = $validated['sender_number']
-                ?? $validated['from']
-                ?? $request->input('from')
-                ?? $request->input('sender_number');
+             $phoneNumber = preg_replace('/[^0-9+]/', '', 
+                        ($validated['sender_number'] 
+                        ?? $validated['from'] 
+                        ?? $request->input('from') ?? ''));
+            
+            $messageBody = $validated['body'] 
+                ?? $validated['caption'] 
+                ?? $validated['content'] 
+                ?? $validated['message'] 
+                ?? '';
 
-            if (empty($phoneNumber)) {
-                Log::channel('whatsapp')->warning('No phone number found in webhook payload', ['payload' => $validated]);
+            $finalType = $validated['type'];    
 
-                return response()->json(['error' => 'No phone number found in payload'], 422);
+               // 3. Filter Tipe Protocol (Agar tidak menuhi database)
+            if (in_array($finalType, ['protocol', 'sender_data', 'read_receipt'])) {
+                return response()->json(['success' => true, 'message' => 'Ignored protocol message'], 200);
             }
 
-            // Clean phone number (remove @ and other characters)
-            $phoneNumber = preg_replace('/[^0-9+]/', '', $phoneNumber);
+             // 4. CEK DUPLIKASI (PENTING: Jangan cek jika ID-nya kosong)
+            $rawMessageId = $validated['message_id'] ?? $request->input('message_id');
+            
+            if (!empty($rawMessageId)) {
+                $existingMessage = Message::where('message_id', $rawMessageId)->first();
+                if ($existingMessage) {
+                    return response()->json(['success' => true, 'message' => 'Duplicate message ignored'], 200);
+                }
+            }
 
-            // Extract message body - try multiple field names
-            $messageBody = $validated['body']
-                ?? $validated['content']
-                ?? $validated['message']
-                ?? '';
+             // Tentukan ID final (Pakai ID asli WA atau buat ID unik string)
+            $finalMessageId = $rawMessageId ?: 'msg_' . time() . '_' . uniqid();
 
             // Get or create customer
             $customer = Customer::firstOrCreate(
-                ['phone' => $phoneNumber],
-                [
-                    'name' => null,
-                    'phone' => $phoneNumber,
-                ]
-            );
+            ['phone' => $phoneNumber],
+            ['name' => null, 'phone' => $phoneNumber]
+             );
 
+            $allowedMedia = ['image', 'video', 'document', 'audio', 'conversation', 'chat', 'text'];
             // Only create message if type is text or has body content
-            if (! empty($messageBody) || in_array($validated['type'], ['image', 'video', 'document', 'audio'])) {
+
+            //cek apakah ada yanag terkait dengan fuzyy rule 
+            if (! empty($messageBody) || in_array($finalType, $allowedMedia)) {
                 // Create message directly (no conversation table)
                 $message = Message::create([
                     'customer_id' => $customer->id,
-                    'message_id' => $validated['message_id'] ?? 'msg_'.time(),
+                    'message_id' => $finalMessageId,
                     'from' => $phoneNumber,
                     'to' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
                     'body' => $messageBody ?: '['.strtoupper($validated['type']).' Media]',
-                    'type' => $validated['type'],
+                    'type' => $finalType,
                     'status' => 'pending',
                     'is_incoming' => true,
                     'parsed' => false,
                     'chat_status' => 'active',
                 ]);
 
-                // Dispatch event
-                WhatsAppMessageReceived::dispatch($message, $validated);
-
-                Log::channel('whatsapp')->info('Incoming message', [
-                    'message_id' => $message->id,
+                Log::channel('whatsapp')->info('Dispatching WhatsAppMessageReceived event', [
+                    'db_id' => $message->id,
+                    'wa_id' => $finalMessageId,
                     'from' => $phoneNumber,
-                    'type' => $validated['type'],
+                    'body' => $message->body,
                 ]);
 
-                return response()->json([
-                    'success' => true,
-                    'message_id' => $message->id,
-                    'customer_id' => $customer->id,
-                ], 200);
-            }
+                WhatsAppMessageReceived::dispatch($message, $validated);
 
+                Log::channel('whatsapp')->info('Incoming message processed', [
+                    'db_id' => $message->id,
+                    'wa_id' => $finalMessageId,
+                    'from' => $phoneNumber,
+                ]);
+
+              return response()->json([
+                'success' => true,
+                'message_id' => $message->id,
+                'customer_id' => $customer->id,
+                ], 200);
+             }
+             
             // Log if no message was created
             Log::channel('whatsapp')->debug('Webhook received but no message created', [
                 'phone' => $phoneNumber,

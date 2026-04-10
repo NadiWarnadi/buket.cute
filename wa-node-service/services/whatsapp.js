@@ -116,8 +116,10 @@ class WhatsAppService {
     // Fungsi kirim teks sederhana
     async sendText(to, text) {
         try {
-            const jid = `${to}@s.whatsapp.net`;
-            return await this.sock.sendMessage(jid, { text });
+            const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+            console.log(`[Sending] Mengirim teks ke: ${jid}`);
+            const result = await this.sock.sendMessage(jid, { text });
+            return result;
         } catch (err) {
             console.error('[Error] Kirim teks gagal:', err);
             throw err;
@@ -125,7 +127,7 @@ class WhatsAppService {
     }
     async sendMedia(to, filePath, type, caption = '') {
         try {
-            const jid = `${to}@s.whatsapp.net`;
+            const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
             const fileBuffer = require('fs').readFileSync(filePath);
 
             let payload = {};
@@ -139,7 +141,7 @@ class WhatsAppService {
                     caption: caption
                 };
             }
-
+            console.log(`[Sending] Mengirim media (${type}) ke: ${jid}`);
             return await this.sock.sendMessage(jid, payload);
         } catch (error) {
             console.error('❌ Error di sendMedia:', error.message);

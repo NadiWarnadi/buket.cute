@@ -14,6 +14,7 @@ const sendToLaravel = async (payload) => {
         return;
     }
 
+    
     try {
         // Log sederhana untuk memantau trafik ke Laravel
         console.log(`🚀 Mengirim webhook ke Laravel untuk nomor: ${payload.sender_number}`);

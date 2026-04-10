@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FuzzyRule;
+use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
 class FuzzyBotService
@@ -13,8 +14,10 @@ class FuzzyBotService
      */
     public function processMessageWithContext(string $message, ?string $currentContext = null): array
     {
-        // Try to find matching rule (uses static method from FuzzyRule)
-        $rule = FuzzyRule::findMatchingRule($message, $currentContext);
+        
+        $normalized = $this->normalizeText($message); 
+    // Try to find matching rule (uses static method from FuzzyRule)
+        $rule = FuzzyRule::findMatchingRule($normalized, $currentContext);
 
         if (!$rule) {
             return [
@@ -150,9 +153,15 @@ class FuzzyBotService
     /**
      * Generate response from template
      * Supports simple variable substitution: {variable_name}
+     * Special handling for dynamic catalog generation
      */
     private function generateResponse(FuzzyRule $rule, string $message): ?string
     {
+        // Special handling for dynamic catalog
+        if ($rule->action === 'show_product') {
+            return $this->generateCatalogResponse();
+        }
+
         if (empty($rule->response_template)) {
             return null;
         }
@@ -176,6 +185,39 @@ class FuzzyBotService
     }
 
     /**
+     * Generate dynamic catalog response from database
+     */
+    private function generateCatalogResponse(): string
+    {
+        try {
+            // Get unique categories from products
+            $categories = Product::select('category')
+                ->distinct()
+                ->where('is_active', true)
+                ->orderBy('category')
+                ->pluck('category')
+                ->toArray();
+
+            if (empty($categories)) {
+                return 'Maaf ka, katalog produk sedang tidak tersedia. Silakan coba lagi nanti.';
+            }
+
+            // Format categories for response
+            $categoryList = implode(', ', $categories);
+
+            return "Ini katalog produk terbaik kami ka 🌸. Ada {$categoryList}. Kakak tertarik yang mana?";
+        } catch (\Exception $e) {
+            Log::error('Error generating catalog response', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Fallback to static response
+            return 'Ini katalog produk terbaik kami ka 🌸. Ada Buket Mawar, Snack Bouquet, Hampers, dan Bouquet Wisuda. Kakak tertarik yang mana?';
+        }
+    }
+
+    /**
      * Get all active rules grouped by intent
      */
     public function getAllRules()
@@ -194,5 +236,181 @@ class FuzzyBotService
         return FuzzyRule::where('is_active', true)
             ->where('intent', $intent)
             ->get();
+    }
+
+    /**
+     * Process message for order collection flow
+     * Handles parameter extraction dan validation untuk multistep ordering
+     * IMPORTANT: Uses eager loading & dependency injection untuk performance
+     *
+     * @param string $message
+     * @param \App\Models\Customer $customer
+     * @return array Order flow result
+     */
+    public function processOrderCollection(
+        string $message,
+        \App\Models\Customer $customer
+    ): array {
+        $paramExtractor = new ParameterExtractionService();
+        $draftService = new OrderDraftService(new ParameterValidationService());
+        $validationService = new ParameterValidationService();
+
+        try {
+            // Get or create draft dengan eager loading
+            $draft = $draftService->getOrCreateDraft($customer);
+
+            // Extract parameters dari message
+            $extracted = $paramExtractor->extractParameters($message, $draft->data);
+
+            // Update draft dengan extracted data
+            $result = $draftService->updateDraftWithExtraction($draft, $extracted);
+            $draft = $result['draft'];
+            $validation = $result['validation'];
+            $nextStep = $result['next_step'];
+
+            // Generate response berdasarkan validation result
+            if ($validation['valid']) {
+                // Semua parameter terkumpul - siap untuk konfirmasi
+                $response = $this->generateConfirmationMessage($draft->data);
+                $action = 'confirm_order';
+
+                return [
+                    'matched' => true,
+                    'intent' => 'order_collection_complete',
+                    'action' => $action,
+                    'response' => $response,
+                    'next_context' => 'confirming',
+                    'draft_id' => $draft->id,
+                    'step' => $nextStep,
+                    'data' => $draft->data,
+                ];
+            } else {
+                // Ada parameter yang masih hilang - minta input
+                $question = $validationService->generateFollowUpQuestion(
+                    $validation['missing'],
+                    $draft->data
+                );
+
+                return [
+                    'matched' => true,
+                    'intent' => 'order_collection_pending',
+                    'action' => 'ask_parameter',
+                    'response' => $question,
+                    'next_context' => $nextStep,
+                    'draft_id' => $draft->id,
+                    'step' => $nextStep,
+                    'missing' => $validation['missing'],
+                    'data' => $draft->data,
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in processOrderCollection', [
+                'message' => $message,
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'matched' => false,
+                'intent' => 'error',
+                'action' => 'escalate',
+                'response' => 'Maaf, terjadi kesalahan saat memproses pesanan Anda. Admin akan segera membantu.',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Generate confirmation message dengan order summary
+     */
+    private function generateConfirmationMessage(array $draftData): string
+    {
+        $confirmationTemplate = <<<'MSG'
+Baik ka, pesanan Anda sudah lengkap. Berikut ringkasannya:
+
+📋 *RINGKASAN PESANAN*
+Nama: {customer_name}
+Produk: {product_name}
+Jumlah: {quantity} biji
+Harga: Rp {total_price}
+Alamat: {customer_address}
+
+Lanjutkan? Ketik "iya" atau "ya" untuk konfirmasi, atau "ubah" jika ingin mengubah data.
+MSG;
+
+        // Replace variables
+        $message = $confirmationTemplate;
+        foreach ($draftData as $key => $value) {
+            $placeholder = '{' . $key . '}';
+            $formatted = $value;
+
+            // Format currency
+            if ($key === 'total_price' && is_numeric($value)) {
+                $formatted = number_format($value, 0, ',', '.');
+            }
+
+            $message = str_replace($placeholder, $formatted, $message);
+        }
+
+        return $message;
+    }
+
+    /**
+     * Process message untuk confirm order
+     */
+    public function processOrderConfirmation(
+        string $message,
+        \App\Models\Customer $customer
+    ): array {
+        $draftService = new OrderDraftService(new ParameterValidationService());
+
+        $message = strtolower(trim($message));
+
+        // Check jika user konfirmasi
+        if (in_array($message, ['iya', 'ya', 'ok', 'setuju', 'confirm', 'lanjut'])) {
+            try {
+                $draft = $draftService->getCustomerActiveDraft($customer);
+
+                if (!$draft) {
+                    return [
+                        'matched' => false,
+                        'response' => 'Maaf, pesanan tidak ditemukan. Mulai dari awal ya.',
+                    ];
+                }
+
+                // Complete the draft -> buat order
+                $order = $draftService->completeDraft($draft);
+
+                return [
+                    'matched' => true,
+                    'intent' => 'order_confirmed',
+                    'action' => 'order_created',
+                    'response' => "Terima kasih! 🙏 Pesanan Anda telah kami terima dengan nomor #{$order->id}. Admin akan segera memproses.",
+                    'order_id' => $order->id,
+                    'next_context' => 'order_completed',
+                ];
+            } catch (\Exception $e) {
+                Log::error('Error confirming order', ['error' => $e->getMessage()]);
+
+                return [
+                    'matched' => false,
+                    'response' => 'Maaf, terjadi kesalahan saat membuat pesanan. Admin akan segera membantu.',
+                ];
+            }
+        } elseif (in_array($message, ['ubah', 'ganti', 'batal', 'tidak', 'tidak jadi'])) {
+            // User ingin ubah data
+            return [
+                'matched' => true,
+                'intent' => 'order_cancel',
+                'action' => 'restart_collection',
+                'response' => 'Baik, mari kita mulai ulang. Siapa nama Anda?',
+                'next_context' => 'collecting_name',
+            ];
+        }
+
+        return [
+            'matched' => false,
+            'response' => 'Maaf, saya tidak mengerti. Ketik "iya" untuk lanjut atau "ubah" untuk mengubah data.',
+        ];
     }
 }

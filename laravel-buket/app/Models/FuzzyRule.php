@@ -37,12 +37,19 @@ class FuzzyRule extends Model
     {
         $message = strtolower(trim($message));
         
-        // First, get rules for current context if exists
+        // ini untuk mengambil di data base semua rule yang aktif dan sesuai dengan context saat ini (jika ada)
         $query = static::where('is_active', true);
         
-        if ($currentContext) {
-            $query->where('context_slug', $currentContext);
-        }
+        $query->where(function($q) use ($currentContext) {
+            $q->where('context_slug', $currentContext);
+            if ($currentContext !== null) {
+                $q->orWhereNull('context_slug');
+            }
+        });
+        // ini cada ngan 
+        // if ($currentContext) {
+        //     $query->where('context_slug', $currentContext);
+        // }
 
         $rules = $query->orderBy('priority', 'desc')->get();
 
@@ -50,20 +57,25 @@ class FuzzyRule extends Model
             return null;
         }
 
-        // Calculate similarity for each rule and find best match
         $bestMatch = null;
-        $bestScore = 0;
+        $highestScore = 0;
 
+        // menghitung similarity untuk setiap rule dan mencari yang paling cocok
         foreach ($rules as $rule) {
             $similarity = self::calculateSimilarity($message, $rule->pattern);
 
-            if ($similarity >= $rule->confidence_threshold && $similarity > $bestScore) {
-                $bestScore = $similarity;
-                $bestMatch = $rule;
+      if ($similarity >= $rule->confidence_threshold && $similarity > $highestScore) {
+            $highestScore = $similarity;
+            $rule->temp_confidence = $similarity;
+            $bestMatch = $rule;
             }
+             if ($highestScore >= 0.99) {
+            break;
         }
+    }
+        
 
-        return $bestMatch;
+        return  $bestMatch;
     }
 
     /**
@@ -77,7 +89,7 @@ class FuzzyRule extends Model
     public static function calculateSimilarity(string $message, string $patterns): float
     {
         $message = strtolower(trim($message));
-        $patternArray = array_map('trim', explode(',', $patterns));
+        $patternArray = array_map('trim', explode('|', $patterns));
 
         $maxScore = 0;
 
@@ -94,15 +106,18 @@ class FuzzyRule extends Model
             }
 
             // 2. Substring match (80% score)
-            if (strpos($message, $pattern) !== false || strpos($pattern, $message) !== false) {
-                $maxScore = max($maxScore, 0.8);
+              if (str_contains($message, $pattern)) {
+                $maxScore = max($maxScore, 0.95);
                 continue;
             }
 
             // 3. Similar text using PHP built-in
             similar_text($message, $pattern, $percent);
-            $percent = $percent / 100;
+            $simScore = $percent / 100;
 
+            //parameteer typo
+            $levScore = 0;
+            $maxLen = max(strlen($message), strlen($pattern));
             // 4. Levenschtein distance (for typos)
             if (function_exists('levenshtein')) {
                 $messageLen = strlen($message);
@@ -119,8 +134,8 @@ class FuzzyRule extends Model
                     }
                 }
             }
-
-            $maxScore = max($maxScore, $percent);
+            $currentPatternScore = max($simScore, $levScore);
+            $maxScore = max($maxScore, $currentPatternScore);
 
             // Stop early if we have high confidence
             if ($maxScore >= 0.95) {

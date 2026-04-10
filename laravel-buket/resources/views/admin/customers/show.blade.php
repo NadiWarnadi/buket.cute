@@ -46,8 +46,8 @@
                         <strong>{{ $customer->orders->count() }}</strong>
                     </div>
                     <div class="d-flex justify-content-between">
-                        <span>Total Percakapan:</span>
-                       
+                        <span>Total Pesan:</span>
+                        <strong>{{ $customer->messages->count() }}</strong>
                     </div>
                 </div>
 
