@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\FuzzyRuleController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\WhatsAppController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\MediaUploadController;
 
 Route::prefix('whatsapp')->group(function () {
     // Webhook untuk menerima pesan dari wa-service (incoming messages)
@@ -57,3 +58,5 @@ Route::prefix('fuzzy-rules')->group(function () {
     // Delete rule
     Route::delete('/{fuzzyRule}', [FuzzyRuleController::class, 'destroy'])->name('fuzzy-rules.destroy');
 });
+
+Route::post('/upload-media', [MediaUploadController::class, 'store']);

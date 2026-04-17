@@ -83,7 +83,8 @@ class WhatsAppService
 
             $payload = [
                 'to' => $to,
-                'text' => $message,
+                // 'text' => $message,
+                'body' => $message,
             ];
 
             $response = Http::withHeaders([
@@ -181,6 +182,12 @@ class WhatsAppService
                 'to' => $phoneNumber,
                 'type' => $mediaType,
                 'error' => $errorMsg,
+            ]);
+            Log::channel('whatsapp')->debug('Preparing to send media', [
+                'phone' => $phoneNumber,
+                'filePath' => $filePath,
+                'exists' => file_exists($filePath),
+                'size' => file_exists($filePath) ? filesize($filePath) : 0,
             ]);
 
             return [

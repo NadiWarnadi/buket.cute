@@ -119,7 +119,10 @@ class CustomerController extends Controller
             return redirect()->route('admin.customers.index')
                 ->with('error', 'Tidak dapat menghapus pelanggan yang memiliki pesanan.');
         }
-
+        // ini kita gar bisa hapus bypas 
+        $customer->orderDrafts()->delete();
+        $customer->messages()->delete();
+        
         $customer->delete();
 
         return redirect()->route('admin.customers.index')

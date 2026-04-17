@@ -3,6 +3,7 @@
 @section('title', 'Chat - ' . ($customer->name ?? $customer->phone ?? 'Customer'))
 
 @section('content')
+@inject('Str', 'Illuminate\Support\Str')
 <style>
     /* Mobile-First Responsive Design */
     :root {
@@ -680,32 +681,37 @@
 
                         <div class="message-group @if($msg->is_incoming) incoming @else outgoing @endif">
                             <div class="message-bubble @if($msg->is_incoming) incoming @else outgoing @endif">
-                                @if($msg->media_url)
-                                    <div class="message-media">
-                                        @if($msg->type === 'image')
-                                            <img src="{{ $msg->media_url }}" alt="Image" loading="lazy">
-                                        @elseif($msg->type === 'video')
-                                            <video controls width="100%">
-                                                <source src="{{ $msg->media_url }}" type="video/mp4">
-                                                Browser Anda tidak mendukung video.
-                                            </video>
-                                        @elseif($msg->type === 'document')
-                                            <div class="message-document">
-                                                <div class="message-document-icon">
-                                                    <i class="bi bi-file-earmark"></i>
-                                                </div>
-                                                <div class="message-document-info">
-                                                    <p class="message-document-name" title="{{ $msg->file_name }}">
-                                                        {{ $msg->file_name ?? 'Document' }}
-                                                    </p>
-                                                    <a href="{{ $msg->media_url }}" download class="message-document-link">
-                                                        <i class="bi bi-download"></i> Unduh
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endif
+                               @if($msg->media->isNotEmpty())
+    @php
+        $mediaItem = $msg->media->first();
+        $mediaUrl = Storage::url($mediaItem->file_path);
+        $mime = $mediaItem->mime_type;
+    @endphp
+    <div class="message-media">
+        @if(Str::startsWith($mime, 'image/'))
+            <a href="{{ $mediaUrl }}" target="_blank">
+                <img src="{{ $mediaUrl }}" alt="Media" loading="lazy" style="max-width: 250px; border-radius: 8px;" />
+            </a>
+        @elseif(Str::startsWith($mime, 'video/'))
+            <video controls style="max-width: 250px; border-radius: 8px;">
+                <source src="{{ $mediaUrl }}" type="{{ $mime }}">
+                Browser tidak mendukung video.
+            </video>
+        @else
+            <div class="document-preview">
+                <i class="bi bi-file-earmark"></i>
+                <a href="{{ $mediaUrl }}" target="_blank">
+                    {{ $mediaItem->file_name ?? 'Unduh file' }}
+                </a>
+            </div>
+        @endif
+    </div>
+@elseif($msg->media_url)
+    <div class="message-media">
+        <i class="bi bi-link-45deg"></i>
+        <a href="{{ $msg->media_url }}" target="_blank">Lihat Media (WhatsApp)</a>
+    </div>
+@endif
 
                                 @if($msg->body)
                                     <div class="message-content">

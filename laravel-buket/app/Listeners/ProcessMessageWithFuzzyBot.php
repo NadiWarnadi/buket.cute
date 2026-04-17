@@ -3,12 +3,14 @@
 namespace App\Listeners;
 
 use App\Events\WhatsAppMessageReceived;
-use App\Models\Conversation;
 use App\Models\Customer;
 use App\Models\Message;
+use App\Services\Chatbot\ConversationManager;
+use App\Services\Chatbot\IntentClassifier;
+use App\Services\Chatbot\OrderFlowManager;
+use App\Services\Chatbot\ReplySender;
 use App\Services\FuzzyBotService;
 use App\Services\OrderDraftService;
-use App\Services\ParameterValidationService;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,278 +18,207 @@ use Illuminate\Support\Facades\Log;
 class ProcessMessageWithFuzzyBot
 {
     protected FuzzyBotService $fuzzyBotService;
-
     protected WhatsAppService $whatsappService;
-
     protected OrderDraftService $orderDraftService;
+    protected IntentClassifier $intentClassifier;
+    protected ReplySender $replySender;
 
     public function __construct(
         FuzzyBotService $fuzzyBotService,
         WhatsAppService $whatsappService,
-        OrderDraftService $orderDraftService
+        OrderDraftService $orderDraftService,
+        IntentClassifier $intentClassifier,
+        ReplySender $replySender
     ) {
         $this->fuzzyBotService = $fuzzyBotService;
         $this->whatsappService = $whatsappService;
         $this->orderDraftService = $orderDraftService;
+        $this->intentClassifier = $intentClassifier;
+        $this->replySender = $replySender;
     }
 
-    /**
-     * Handle the event.
-     * IMPORTANT: Uses eager loading dengan with() untuk menghindari N+1 queries
-     */
     public function handle(WhatsAppMessageReceived $event): void
     {
         $message = $event->message;
+        $payload = $event->payload;    // <-- array dari webhook controller
         $traceId = uniqid('trace_', true);
 
-        if ($message->from === env('WHATSAPP_BUSINESS_PHONE', 'system')) {
+        // 1. Cegah pemrosesan pesan dari nomor bisnis sendiri
+        if ($message->from === config('services.whatsapp.business_phone')) {
             return;
         }
 
+        // 2. Lock untuk mencegah duplikasi
         $processed = DB::transaction(function () use ($message) {
             $fresh = Message::where('id', $message->id)->lockForUpdate()->first();
             if (!$fresh || $fresh->parsed) {
                 return false;
             }
-
-            $fresh->update([
-                'parsed' => true,
-                'parsed_at' => now(),
-            ]);
-
+            $fresh->update(['parsed' => true, 'parsed_at' => now()]);
             return true;
         });
 
         if (!$processed) {
-            Log::channel('whatsapp')->warning('Duplicate listener invocation skipped', [
-                'message_id' => $message->id,
-                'wa_message_id' => $message->message_id,
-                'trace_id' => $traceId,
-            ]);
+            Log::channel('whatsapp')->warning('Duplicate message skipped', ['id' => $message->id]);
             return;
         }
 
-        Log::channel('whatsapp')->info('Listener Berjalan - Tipe: ' . $message->type, ['trace_id' => $traceId]);
-
-        try {
-            // Only process text messages
-            // Izinkan tipe 'text' atau 'conversation'
-            // Izinkan 'text' ATAU 'conversation' agar Bot mau jalan
-            if (!in_array($message->type, ['text', 'conversation','chat']) || empty($message->body)) {
-                return;
-            }
-
-            // Eager load relationships untuk menghindari N+1
-            $message->load(['customer', 'order']);
-            // Get atau create customer
-            $customer = $message->customer ?? Customer::getOrCreateFromPhone($message->from);
-
-            // Update message dengan customer
-            if (!$message->customer_id) {
-                $message->update([
-                    'customer_id' => $customer->id,
-                ]);
-            }
-
-            $userBody = trim($message->body);
-
-            // PRIORITY 1: Check for greeting - always process as new conversation
-            // Need to check active draft first for greeting priority logic
-            $activeDraft = $this->orderDraftService->getCustomerActiveDraft($customer);
-
-            if ($this->isGreeting($userBody)) {
-                Log::channel('whatsapp')->info('Greeting detected - resetting context', [
-                    'message_id' => $message->id,
-                    'body' => $userBody,
-                ]);
-
-                // Reset customer context for new conversation
-                $customer->update(['current_context' => null]);
-
-                // Cancel any active draft if greeting detected
-                if ($activeDraft) {
-                    $activeDraft->delete();
-                    Log::channel('whatsapp')->info('Active draft cancelled due to greeting', [
-                        'draft_id' => $activeDraft->id,
-                        'customer_id' => $customer->id,
-                    ]);
-                }
-
-                $result = $this->fuzzyBotService->processMessageWithContext($userBody, null);
-            }
-            // PRIORITY 2: Check jika ada active order draft (collecting parameters)
-            elseif ($activeDraft) {
-                $currentStep = $activeDraft->step;
-                if ($currentStep === 'confirming') {
-                    $result = $this->fuzzyBotService->processOrderConfirmation($userBody, $customer);
-                } else {
-                    $result = $this->fuzzyBotService->processOrderCollection($userBody, $customer);
-                }
-            }
-            // PRIORITY 3: General processing
-            else {
-                if ($this->isOrderIntent($userBody)) {
-                    $result = $this->fuzzyBotService->processOrderCollection($userBody, $customer);
-                } else {
-                    $result = $this->fuzzyBotService->processMessageWithContext(
-                        $userBody,
-                        $customer->current_context ?? null
-                    );
-                }
-            }
-
-            // Update message dengan parsing result
-            $message->update([
-                'parsed' => true,
-                'parsed_at' => now(),
-                'chat_status' => 'active',
-                // 'chat_status' => ($result['matched'] ?? false) ? 'active' : 'pending',
-            ]);
-
-            // Send automatic response
-            if (($result['matched'] ?? false) && !empty($result['response'])) {
-                if ($this->shouldSendAutoReply($result['action'] ?? null)) {
-                    $this->sendAutoReply($message, $result, $traceId);
-                }
-
-                Log::channel('whatsapp')->info('Message processed successfully', [
-                    'message_id' => $message->id,
-                    'intent' => $result['intent'] ?? null,
-                    'action' => $result['action'] ?? null,
-                    'customer_id' => $customer->id,
-                    'trace_id' => $traceId,
-                ]);
-            } else {
-                $fallbackText = "Maaf ka, saya belum paham maksudnya. Bisa ketik 'Bantuan' atau 'Pesan'?";
-
-                 $this->whatsappService->sendText($message->from, $fallbackText);
-                    Message::create([
-                                'customer_id' => $message->customer_id,
-                                'message_id'  => 'fallback_' . time() . '_' . uniqid(),
-                                'from'        => env('WHATSAPP_BUSINESS_PHONE', 'system'),
-                                'to'          => $message->from,
-                                'body'        => $fallbackText,
-                                'type'        => 'text',
-                                'status'      => 'sent',
-                                'is_incoming' => false,
-                                'parsed'      => true,
-                                'chat_status' => 'active',
-                            ]);
-                            
-                Log::channel('whatsapp')->debug('No match found for message', [
-                    'message_id' => $message->id,
-                    'body' => $message->body,
-                    'customer_id' => $customer->id,
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::channel('whatsapp')->error('Error processing message', [
-                'message_id' => $message->id ?? null,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
+        // 3. Hanya proses tipe yang relevan
+        if (!in_array($message->type, ['text', 'conversation', 'chat', 'extendedtext']) || empty($message->body)) {
+            return;
         }
-    }
 
-    /**
-     * Detect if message contains greeting intent
-     * Keywords: halo, hai, hello, salam, dll
-     */
-    private function isGreeting(string $message): bool
-    {
-        $greetingKeywords = [
-            'halo', 'hai', 'hay', 'hello', 'hey', 'hi',
-            'assalamualaikum', 'asalamualaikum', 'salam',
-            'pagi', 'siang', 'sore', 'malam',
-            'punten', 'spada', 'selamat'
+        // 4. Dapatkan customer
+        $customer = Customer::where('phone', $message->from)->first();
+        if (!$customer) {
+            $customer = Customer::create(['phone' => $message->from]);
+        }
+        $message->update(['customer_id' => $customer->id]);
+
+        // 5. Inisialisasi service‑service utama
+        $conv = new ConversationManager($customer);
+        $userMessage = trim($message->body);
+        $intent = $this->intentClassifier->classify($userMessage);
+
+        // 6. Jika sedang ditangani admin, jangan proses bot
+        if ($conv->isAdminHandled()) {
+            Log::channel('whatsapp')->info('Admin takeover active, bot skipped', ['customer' => $customer->phone]);
+            return;
+        }
+
+        Log::channel('whatsapp')->info('Processing message', [
+            'customer' => $customer->phone,
+            'intent' => $intent,
+            'state' => $conv->getState(),
+            'message' => $userMessage,
+        ]);
+
+        // 7. Route berdasarkan intent dan state
+        $state = $conv->getState();
+        $orderStates = [
+            ConversationManager::STATE_ORDERING_NAME,
+            ConversationManager::STATE_ORDERING_PRODUCT,
+            ConversationManager::STATE_ORDERING_QUANTITY,
+            ConversationManager::STATE_ORDERING_ADDRESS,
+            ConversationManager::STATE_ORDERING_CONFIRMING,
         ];
 
-        $lowerMessage = strtolower($message);
-
-        foreach ($greetingKeywords as $keyword) {
-            if (strpos($lowerMessage, $keyword) !== false) {
-                return true;
-            }
+        if (in_array($state, $orderStates)) {
+    // Jika state adalah bagian dari order flow, gunakan OrderFlowManager
+            $this->handleOrder($conv, $customer, $userMessage);
+            return;
         }
 
-        return false;
+        switch ($intent) {
+    case 'greeting':
+        $this->handleGreeting($conv, $customer, $payload);
+        break;
+
+    case 'order':
+        $this->handleOrder($conv, $customer, $userMessage);
+        break;
+
+    case 'confirm':
+    case 'cancel':
+        $this->handleConfirmationOrCancel($conv, $customer, $userMessage, $intent);
+        break;
+
+    case 'help':
+        $this->handleHelp($conv, $customer);
+        break;
+
+    default:
+        $this->handleFaqOrFallback($conv, $customer, $userMessage);
+        break;
+}
     }
 
     /**
-     * Detect if message contains order intent
-     * Keywords: pesan, order, beli, ingin, mau, ambil, dst
+     * Tangani sapaan: reset state dan kirim balasan ramah.
      */
-    private function isOrderIntent(string $message): bool
+    protected function handleGreeting(ConversationManager $conv, Customer $customer, array $payload): void
     {
-        $orderKeywords = ['pesan', 'order', 'beli', 'ingin', 'mau', 'ambil', 'sewa', 'kasih', 'bikin', 'buatkan'];
-        $lowerMessage = strtolower($message);
-
-        foreach ($orderKeywords as $keyword) {
-            if (strpos($lowerMessage, $keyword) !== false) {
-                return true;
-            }
+        $conv->reset();
+        // Hapus draft jika ada
+        $draft = $this->orderDraftService->getCustomerActiveDraft($customer);
+        if ($draft) {
+            $draft->delete();
         }
-
-        return false;
+        
+        Log::channel('whatsapp')->debug('Greeting payload', [
+            'payload' => $payload,
+            'pushname' => $payload['pushname'] ?? 'MISSING'
+        ]);
+        // Ambil pushname dari payload (dikirim oleh Node.js)
+        $displayName = $payload['pushname'] ?? 'Kak';
+        $reply = "Halo, {$displayName}! Selamat datang di Buket Cute. Ada yang bisa saya bantu? 😊";
+        $this->replySender->send($customer, $reply);
     }
 
     /**
-     * Determine if we should send automatic reply
+     * Tangani intent pemesanan: delegasikan ke OrderFlowManager (nantinya).
+     * Untuk sementara, gunakan logika lama sebagai fallback.
      */
-    private function shouldSendAutoReply(?string $action): bool
+    protected function handleOrder(ConversationManager $conv, Customer $customer, string $message): void
+{
+    $orderFlow = app(OrderFlowManager::class, ['conv' => $conv]);
+    $orderFlow->process($message, $customer);
+}
+
+    /**
+     * Tangani konfirmasi atau pembatalan saat dalam state confirming.
+     */
+    protected function handleConfirmationOrCancel(ConversationManager $conv, Customer $customer, string $message, string $intent): void
     {
-        if (empty($action)) {
-            return true; // Default: send reply
+        $state = $conv->getState();
+        if ($state !== ConversationManager::STATE_ORDERING_CONFIRMING) {
+            // Jika tidak dalam state confirming, abaikan
+            $this->handleFaqOrFallback($conv, $customer, $message);
+            return;
         }
 
-        // Don't auto-reply for certain actions
-        $noAutoReplyActions = ['escalate', 'manual_review', 'pending'];
+        $result = $this->fuzzyBotService->processOrderConfirmation($message, $customer);
 
-        return ! in_array($action, $noAutoReplyActions);
+        if ($result['matched'] && !empty($result['response'])) {
+            $this->replySender->send($customer, $result['response']);
+            if ($result['action'] === 'order_created') {
+                $conv->reset(); // Pesanan selesai
+            } else {
+                $conv->setState($result['next_context'] ?? null);
+            }
+        } else {
+            $this->replySender->send($customer, "Ketik 'iya' untuk lanjut atau 'ubah' untuk mengubah data.");
+        }
     }
 
     /**
-     * Send automatic reply through WhatsApp
+     * Tangani permintaan bantuan / admin.
      */
-    private function sendAutoReply(Message $message, array $result, string $traceId = ''): void
+    protected function handleHelp(ConversationManager $conv, Customer $customer): void
     {
-        try {
-            // Send reply via WhatsApp service
-            $replyResult = $this->whatsappService->sendText(
-                $message->from,
-                $result['response']
-            );
+        // Aktifkan admin takeover (nantinya admin akan tangani via panel)
+        $conv->setAdminHandled(true);
+        $this->replySender->send($customer, "Baik, sebentar ya Kak. Admin kami akan segera membantu. 🙏");
+        // TODO: Kirim notifikasi ke admin
+    }
 
-            if ($replyResult['success']) {
-                // Create reply message record
-                Message::create([
-                    'customer_id' => $message->customer_id,
-                    'order_id' => $message->order_id,
-                    'message_id' => $replyResult['message_id'] ?? 'msg_'.time() . '_' . uniqid(),
-                    'from' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
-                    'to' => $message->from,
-                    'body' => $result['response'],
-                    'type' => 'text',
-                    'status' => 'sent',
-                    'is_incoming' => false,
-                    'parsed' => true,
-                    'parsed_at' => now(),
-                    'chat_status' => 'active',
-                ]);
+    /**
+     * Tangani FAQ atau fallback.
+     */
+    protected function handleFaqOrFallback(ConversationManager $conv, Customer $customer, string $message): void
+    {
+        $currentContext = $conv->getState();
+        $result = $this->fuzzyBotService->processMessageWithContext($message, $currentContext);
 
-                Log::channel('whatsapp')->info('Automatic reply sent', [
-                    'original_message_id' => $message->id,
-                    'reply_message_id' => $replyResult['message_id'] ?? null,
-                    'intent' => $result['intent'],
-                    'trace_id' => $traceId,
-                ]);
+        if ($result['matched'] && !empty($result['response'])) {
+            $this->replySender->send($customer, $result['response']);
+            if (isset($result['next_context'])) {
+                $conv->setState($result['next_context']);
             }
-        } catch (\Exception $e) {
-            Log::channel('whatsapp')->error('Failed to send automatic reply', [
-                'message_id' => $message->id,
-                'error' => $e->getMessage(),
-                'trace_id' => $traceId,
-            ]);
+        } else {
+            // Fallback jika tidak ada yang cocok
+            $fallback = "Maaf, saya belum mengerti. Bisa tanyakan hal lain atau ketik 'bantuan' untuk admin.";
+            $this->replySender->send($customer, $fallback);
         }
     }
 }

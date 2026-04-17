@@ -11,8 +11,13 @@ const sendToLaravel = async (payload) => {
 
     if (!url) {
         console.log('[Warn] LARAVEL_WEBHOOK_URL tidak dikonfigurasi di .env');
+        throw new Error('LARAVEL_WEBHOOK_URL tidak dikonfigurasi');
         return;
     }
+
+    console.log('\n========== PAYLOAD KE LARAVEL ==========');
+    console.log(JSON.stringify(payload, null, 2));
+    console.log('=========================================\n');
 
     
     try {
@@ -40,6 +45,7 @@ const sendToLaravel = async (payload) => {
         } else {
             console.error('❌ Webhook Error:', error.message);
         }
+        throw error;
     }
 };
 

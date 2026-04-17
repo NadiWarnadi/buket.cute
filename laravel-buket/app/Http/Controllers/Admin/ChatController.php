@@ -50,20 +50,34 @@ class ChatController extends Controller
      * Send reply message to customer
      */
     public function sendReply(Request $request, Customer $customer)
-    {
+    {   
+    
+         Log::debug('ChatController sendReply request', $request->all());
         try {
             $validated = $request->validate([
-                'body' => 'required|string|max:1000',
+                'body' => 'nullable|string|max:1000',
                 'type' => 'nullable|string|in:text,image,document',
                 'media' => 'nullable|file|max:25600',
             ]);
 
+            $messageBody = $request->body ? trim($request->body) : '';
+        
+        // 2. Cek apakah ada file
+        $hasFile = $request->hasFile('media') && $request->file('media')->isValid();
+
+        // 3. Validasi: Hanya error jika dua-duanya (teks DAN file) kosong
+        if (empty($messageBody) && !$hasFile) {
+            return redirect()->back()->with('error', 'Pesan atau file harus diisi.');
+        }
             // Trim whitespace from body
-            $messageBody = trim($validated['body']);
-            if (empty($messageBody)) {
-                return redirect()->route('admin.chat.show', $customer)
-                    ->with('error', 'Pesan tidak boleh kosong!');
-            }
+//             $messageBody = trim($validated['body']);
+//             if ($messageBody === '' && !$request->hasFile('media')) {
+//     return redirect()->back()->with('error', 'Pesan atau file harus diisi.');
+// }
+//             if (empty($messageBody)) {
+//                 return redirect()->route('admin.chat.show', $customer)
+//                     ->with('error', 'Pesan tidak boleh kosong!');
+//             }
 
             $messageType = $validated['type'] ?? 'text';
             $mediaPath = null;
@@ -71,20 +85,27 @@ class ChatController extends Controller
             $fileName = null;
 
             // Handle media upload
-            if ($request->hasFile('media') && $request->file('media')->isValid()) {
-                $file = $request->file('media');
-                $fileName = $file->getClientOriginalName();
-
-                // Store file in storage/app/messages/{customer_id}
-                $path = $file->store("messages/{$customer->id}", 'local');
-                $mediaPath = $path;
-                $mediaUrl = url("storage/{$path}");
+           if ($hasFile) {
+            $file = $request->file('media');
+            $fileName = $file->getClientOriginalName();
+            
+            // Simpan ke storage/app/public/messages/...
+            $path = $file->store("messages/{$customer->id}", 'public');
+            $mediaPath = $path;
+            $mediaUrl = asset("storage/{$path}");
 
                 Log::channel('whatsapp')->info('Media file stored', [
-                    'path' => $path,
-                    'customer_id' => $customer->id,
-                ]);
-            }
+                'path' => $path,
+                'customer_id' => $customer->id,
+            ]);
+            }   
+
+            Log::debug('About to call sendMessageViaWhatsApp', [
+    'phone' => $customer->phone,
+    'body' => $messageBody,
+    'type' => $messageType,
+    'mediaPath' => $mediaPath,
+]);
 
             // Send via WhatsApp
             $waResponse = $this->sendMessageViaWhatsApp(
@@ -98,7 +119,7 @@ class ChatController extends Controller
                 return redirect()->route('admin.chat.show', $customer)
                     ->with('error', 'Gagal mengirim: '.$waResponse['message']);
             }
-
+            Log::debug('Response from sendMessageViaWhatsApp', $waResponse);
             // Create and save message
             $message = Message::create([
                 'customer_id' => $customer->id,
@@ -126,7 +147,12 @@ class ChatController extends Controller
                     'file_type' => $messageType,
                 ]);
             }
-
+                Log::debug('Preparing to send WhatsApp message', [
+                    'phone' => $customer->phone,
+                    'body' => $messageBody,
+                    'type' => $messageType,
+                    'mediaPath' => $mediaPath,
+                ]);
             Log::channel('whatsapp')->info('Message sent', ['to' => $customer->phone, 'message_id' => $message->id]);
 
             return redirect()->route('admin.chat.show', $customer)
@@ -215,51 +241,95 @@ class ChatController extends Controller
      */
     private function sendMessageViaWhatsApp(string $phone, string $content, string $type = 'text', ?string $mediaPath = null): array
     {
+        Log::debug('sendMessageViaWhatsApp entry point', [
+            'phone' => $phone,
+            'type' => $type,
+            'has_media_path' => !empty($mediaPath),
+            'service_url' => env('WHATSAPP_SERVICE_URL') // Memastikan URL tujuan sudah benar
+        ]);
         try {
-            $waServiceUrl = env('WHATSAPP_SERVICE_URL', 'http://localhost:3000');
+            $waServiceUrl = rtrim(env('WHATSAPP_SERVICE_URL', 'http://localhost:3000'), '/');
             $apiKey = env('WHATSAPP_API_KEY');
 
-            $payload = [
-                'to' => $phone,
-                'text' => $content, // For text messages
-                'content' => $content, // For generic use
-            ];
+        // Jika ada file media, gunakan endpoint send-media
+        if ($mediaPath && $type !== 'text') {
+            $fullPath = storage_path("app/public/{$mediaPath}");
 
-            // Add media path if provided
-            if ($mediaPath && $type !== 'text') {
-                $payload['media'] = $mediaPath;
-                $payload['filePath'] = storage_path("app/{$mediaPath}");
+            if (!file_exists($fullPath)) {
+                Log::error('Media file benar-benar tidak ada', ['path' => $fullPath]);
+                $fullPath = storage_path("app/{$mediaPath}");
+                return ['success' => false, 'message' => 'File media tidak ditemukan.'];
+            }
+
+            Log::debug('Sending media to Node.js', [
+                'url' => "{$waServiceUrl}/api/send-media",
+                'to' => $phone,
+                'type' => $type,
+                'file' => $fullPath,
+                'file_exists' => file_exists($fullPath),
+                'file_size' => filesize($fullPath),
+            ]);
+
+            // Check if file is readable
+            if (!is_readable($fullPath)) {
+                Log::error('File not readable', ['path' => $fullPath]);
+                return ['success' => false, 'message' => 'File tidak bisa dibaca.'];
             }
 
             $response = Http::withHeaders([
                 'x-api-key' => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post("{$waServiceUrl}/api/send-{$type}", $payload);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message_id' => $response->json('message_id'),
-                ];
-            }
-
-            return [
-                'success' => false,
-                'message' => $response->json('error') ?? 'Unknown error from WhatsApp service',
-            ];
-
-        } catch (\Exception $e) {
-            Log::channel('whatsapp')->error('Error calling WhatsApp service', [
-                'phone' => $phone,
-                'error' => $e->getMessage(),
+            ])
+            ->timeout(120) // Increase timeout
+            ->attach(
+                'file',                         // nama field (harus 'file')
+                fopen($fullPath, 'r'),          // stream file
+                basename($fullPath)             // nama file
+            )
+            ->post("{$waServiceUrl}/api/send-media", [
+                'to'      => $phone,
+                'caption' => $content ?: '',    // caption boleh kosong
+                'type'    => $type,
             ]);
+        } else {
+            // Kirim teks biasa
+            $response = Http::withHeaders([
+                'x-api-key' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])
+            ->timeout(30)
+            ->post("{$waServiceUrl}/api/send-text", [
+                'to'   => $phone,
+                'text' => $content,
+            ]);
+        }
 
+        if ($response->successful()) {
             return [
-                'success' => false,
-                'message' => $e->getMessage(),
+                'success'    => true,
+                'message_id' => $response->json('message_id') ?? 'msg_' . uniqid(),
             ];
         }
+
+        // Gagal
+        Log::error('Node.js returned error', [
+            'status' => $response->status(),
+            'body'   => $response->body(),
+        ]);
+        return [
+            'success' => false,
+            'message' => $response->json('error') ?? 'Gagal mengirim pesan.',
+        ];
+
+    } catch (\Exception $e) {
+        Log::error('Exception when calling WhatsApp service', [
+            'message' => $e->getMessage(),
+        ]);
+        return [
+            'success' => false,
+            'message' => $e->getMessage(),
+        ];
     }
+}
 
     /**
      * Send read receipt to WhatsApp service

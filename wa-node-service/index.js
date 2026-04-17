@@ -8,6 +8,7 @@ const path = require('path');
 const WhatsAppService = require('./services/whatsapp');
 const { sendToLaravel } = require('./services/webhook');
 const authMiddleware = require('./middlewares/auth');
+const { processPendingJobs, getQueueStats } = require('./services/queue');
 
 const app = express();
 app.use(express.json());
@@ -23,9 +24,9 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + '-' + file.originalname);
     }
 });
-const upload = multer({ 
+const upload = multer({
     storage,
-    limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE) || 15) * 1024 * 1024 } 
+    limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE) || 15) * 1024 * 1024 }
 });
 
 // Inisialisasi WhatsApp
@@ -33,7 +34,7 @@ const wa = new WhatsAppService(process.env.SESSION_NAME);
 
 // Setup Webhook: Setiap ada pesan masuk, kirim ke Laravel
 wa.setOnMessage(async (payload) => {
-    await sendToLaravel(payload);
+    console.log('[Info] onMessage callback dipanggil (seharusnya tidak perlu, karena sudah pakai queue)');
 });
 
 wa.init();
@@ -44,9 +45,11 @@ wa.init();
 
 // Cek Status Koneksi
 app.get('/api/status', authMiddleware, (req, res) => {
-    res.json({ 
+    const queueStats = getQueueStats();
+    res.json({
+        ...status,
         status: wa.getConnectionStatus(),
-        session: process.env.SESSION_NAME 
+        session: process.env.SESSION_NAME
     });
 });
 
@@ -63,29 +66,78 @@ app.post('/api/send-text', authMiddleware, async (req, res) => {
     }
 });
 
-// 2. Tambahkan ini: Kirim Media (Gambar/Dokumen)
 app.post('/api/send-media', authMiddleware, upload.single('file'), async (req, res) => {
-    const { to, caption, type } = req.body; // type bisa: 'image' atau 'document'
+    console.log(`[Send Media] Request received: to=${req.body.to}, type=${req.body.type}, file=${req.file ? req.file.originalname : 'none'}`);
+    const { to, caption, type } = req.body;
     const file = req.file;
 
+    // 1. Validasi parameter (Pastikan tidak mengecek 'text' di sini!)
     if (!to || !file) {
-        if (file) fs.unlinkSync(file.path); // Hapus file jika parameter lain kurang
+        if (file) fs.unlinkSync(file.path);
         return res.status(400).json({ error: 'Parameter to dan file wajib ada' });
     }
 
+    console.log(`[Send Media] File uploaded to: ${file.path}, size: ${file.size}`);
+
     try {
-        // Memanggil fungsi sendMedia yang ada di whatsapp.js
-        const result = await wa.sendMedia(to, file.path, type || 'image', caption);
-        
-        // Hapus file dari folder temp setelah terkirim agar RAM & Disk tetap lega
+        // 2. Kirim ke Service WhatsApp (Baileys)
+        // Pastikan fungsi sendMedia di services/whatsapp.js sudah benar
+        const result = await wa.sendMedia(to, file.path, type || 'image', caption || '');
+
+        // 3. Hapus file temp setelah berhasil
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-        
+
         res.json({ success: true, message: 'Media terkirim', data: result });
     } catch (err) {
+        console.error('[Baileys Error]', err.message);
         if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
         res.status(500).json({ success: false, error: err.message });
     }
 });
+// 2. Tambahkan ini: Kirim Media (Gambar/Dokumen)
+// app.post('/api/send-media', authMiddleware, upload.single('file'), async (req, res) => {
+//     const { to, caption, type } = req.body; // type bisa: 'image' atau 'document'
+//     const file = req.file;
+
+//     console.log(`[Send Media] Menghandle kiriman ke: ${to}, Tipe: ${type}`);
+
+//      if (!to || !file) {
+//         if (file) fs.unlinkSync(file.path); 
+//         return res.status(400).json({ error: 'Parameter to dan file wajib ada' });
+//     }
+
+//     try {
+//         // Gunakan variabel 'caption' agar tidak error
+//         const result = await wa.sendMedia(to, file.path, type || 'image', caption || '');
+
+//         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+//         res.json({ success: true, message: 'Media terkirim', data: result });
+//     } catch (err) {
+//         console.error('[Error WA Media]', err.message);
+//         if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+//         res.status(500).json({ success: false, error: err.message });
+//     }
+//   });  
+
+// if (!to || !file) {
+//     if (file) fs.unlinkSync(file.path); // Hapus file jika parameter lain kurang
+//     return res.status(400).json({ error: 'Parameter to dan file wajib ada' });
+// }
+
+//     try {
+//         // Memanggil fungsi sendMedia yang ada di whatsapp.js
+//         const result = await wa.sendMedia(to, file.path, type || 'image', caption);
+
+//         // Hapus file dari folder temp setelah terkirim agar RAM & Disk tetap lega
+//         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+
+//         res.json({ success: true, message: 'Media terkirim', data: result });
+//     } catch (err) {
+
+//         if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+//         res.status(500).json({ success: false, error: err.message });
+//     }
+
 
 // Health Check (Tanpa Auth untuk Load Balancer/Monitor)
 app.get('/health', (req, res) => {
@@ -98,9 +150,23 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal Server Error' });
 });
 
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`\n🚀 WA Gateway Server running on port ${PORT}`);
     console.log(`🔗 Webhook URL: ${process.env.LARAVEL_WEBHOOK_URL}`);
     console.log(`🔐 API Key protected: Yes\n`);
+    const QUEUE_INTERVAL = parseInt(process.env.QUEUE_PROCESS_INTERVAL) || 5000; // 5 detik default
+    setInterval(() => {
+        processPendingJobs().catch(err => {
+            console.error('[Queue Worker] Error:', err);
+        });
+    }, QUEUE_INTERVAL);
+
+    processPendingJobs().catch(err => {
+        console.error('[Queue Worker] Error saat startup:', err);
+    });
+
+    console.log(`🔄 Queue worker berjalan setiap ${QUEUE_INTERVAL / 1000} detik`);
 });
