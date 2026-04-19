@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
         // Chat - Simplified (customers as conversations)
         Route::resource('chat', ChatController::class)->only(['index', 'show', 'destroy'])->parameters(['chat' => 'customer']);
         Route::post('chat/{customer}/send', [ChatController::class, 'sendReply'])->name('chat.send');
+        Route::post('chat/{customer}/toggle-delegation', [ChatController::class, 'toggleDelegation'])->name('chat.toggle-delegation');
         Route::patch('chat/{customer}/status', [ChatController::class, 'updateStatus'])->name('chat.updateStatus');
         Route::patch('messages/{message}/read', [ChatController::class, 'markMessageAsRead'])->name('messages.mark-read');
         Route::get('chat/stats', [ChatController::class, 'getStats'])->name('chat.stats');

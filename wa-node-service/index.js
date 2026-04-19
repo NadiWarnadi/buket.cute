@@ -144,6 +144,61 @@ app.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
+/**
+ * ENDPOINTS ANTI-DETECTION / BROADCAST
+ */
+
+// Kirim Batch Message dengan Anti-Detection
+app.post('/api/send-batch', authMiddleware, async (req, res) => {
+    const { recipients, text } = req.body;
+
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ error: 'Parameter recipients (array) wajib ada' });
+    }
+
+    if (!text) {
+        return res.status(400).json({ error: 'Parameter text wajib ada' });
+    }
+
+    try {
+        console.log(`[API] Batch request untuk ${recipients.length} kontak`);
+        const results = await wa.sendBatch(recipients, text);
+
+        res.json({
+            success: true,
+            message: `Batch message berhasil diproses untuk ${recipients.length} kontak`,
+            data: results
+        });
+    } catch (err) {
+        console.error('[API Batch Error]', err.message);
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+});
+
+// Dapatkan Statistik Broadcast/Anti-Detection
+app.get('/api/broadcast-stats', authMiddleware, (req, res) => {
+    try {
+        const hours = parseInt(req.query.hours) || 24;
+        const stats = wa.getBroadcastStats(hours);
+
+        res.json({
+            success: true,
+            hours,
+            total_recipients: stats.length,
+            data: stats
+        });
+    } catch (err) {
+        console.error('[API Stats Error]', err.message);
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+});
+
 // Error Handling
 app.use((err, req, res, next) => {
     console.error('[System Error]', err.stack);

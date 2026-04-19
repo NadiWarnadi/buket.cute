@@ -83,8 +83,8 @@ class WhatsAppService
 
             $payload = [
                 'to' => $to,
-                // 'text' => $message,
-                'body' => $message,
+                //
+                'text' => $message,
             ];
 
             $response = Http::withHeaders([
@@ -228,8 +228,8 @@ class WhatsAppService
         }
 
         // Pastikan dimulai dengan country code 62
-        if (! substr($phone, 0, 2) === '62') {
-            if (! substr($phone, 0, 1) === '6') {
+        if (substr($phone, 0, 2) !== '62') {
+            if (substr($phone, 0, 1) !== '6') {
                 $phone = '62'.$phone;
             }
         }

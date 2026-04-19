@@ -23,6 +23,7 @@ const FormData = require('form-data');        // <-- tambahan
 
 const { parseIncomingMessage } = require('../utils/parser');
 const { addJob } = require('./queue');
+const AntiDetectionService = require('./antiDetection'); // <-- anti-detection import
 
 class WhatsAppService {
     constructor(sessionName = 'wa-session') {
@@ -30,6 +31,7 @@ class WhatsAppService {
         this.sock = null;
         this.onMessageCallback = null;
         this.logger = pino({ level: 'info' });
+        this.antiDetection = new AntiDetectionService(); // <-- inisialisasi anti-detection
     }
 
     async init() {
@@ -197,7 +199,17 @@ class WhatsAppService {
         try {
             const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
             console.log(`[Sending] Mengirim teks ke: ${jid}`);
-            const result = await this.sock.sendMessage(jid, { text });
+
+            // Gunakan anti-detection wrapper
+            const result = await this.antiDetection.sendMessageWithAntiDetection(
+                this.sock,
+                to,
+                text,
+                async () => {
+                    return await this.sock.sendMessage(jid, { text });
+                }
+            );
+
             return result;
         } catch (err) {
             console.error('[Error] Kirim teks gagal:', err);
@@ -235,8 +247,19 @@ class WhatsAppService {
                 };
             }
             console.log(`[Sending] Mengirim media (${type}) ke: ${jid}, ukuran: ${fileBuffer.length} bytes`);
+
+            // Gunakan anti-detection wrapper
             try {
-                const result = await this.sock.sendMessage(jid, payload);
+                const result = await this.antiDetection.sendMediaWithAntiDetection(
+                    this.sock,
+                    to,
+                    filePath,
+                    type,
+                    caption,
+                    async () => {
+                        return await this.sock.sendMessage(jid, payload);
+                    }
+                );
                 console.log(`[Success] Media terkirim ke ${jid}`);
                 return result;
             } catch (sendError) {
@@ -269,6 +292,45 @@ class WhatsAppService {
             user: this.sock.user ? this.sock.user.id.split(':')[0] : null,
             message: isConnected ? 'WhatsApp Connected' : 'WhatsApp Disconnected'
         };
+    }
+
+    /**
+     * Kirim batch/broadcast message dengan anti-detection
+     * Mencegah WhatsApp mendeteksi mass sending
+     * @param {Array} recipients - Array nomor tujuan
+     * @param {string} text - Pesan teks
+     * @param {Object} options - Opsi tambahan
+     */
+    async sendBatch(recipients, text, options = {}) {
+        try {
+            if (!Array.isArray(recipients) || recipients.length === 0) {
+                throw new Error('Recipients harus array dengan minimal 1 nomor');
+            }
+
+            console.log(`[Batch] Mulai mengirim pesan ke ${recipients.length} kontak dengan anti-detection`);
+
+            const results = await this.antiDetection.sendBatchMessages(
+                this.sock,
+                recipients,
+                text,
+                async (to) => {
+                    const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+                    return await this.sock.sendMessage(jid, { text });
+                }
+            );
+
+            return results;
+        } catch (err) {
+            console.error('[Batch] Error:', err.message);
+            throw err;
+        }
+    }
+
+    /**
+     * Dapatkan statistik broadcast
+     */
+    getBroadcastStats(hours = 24) {
+        return this.antiDetection.getBroadcastStats(hours);
     }
 }
 

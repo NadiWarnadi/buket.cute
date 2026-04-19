@@ -236,6 +236,39 @@ class ChatController extends Controller
     }
 
     /**
+     * Toggle delegation between AI and Admin
+     */
+    public function toggleDelegation(Request $request, Customer $customer)
+    {
+        try {
+            $validated = $request->validate([
+                'is_admin_handled' => 'required|boolean',
+            ]);
+
+            $customer->update([
+                'is_admin_handled' => $validated['is_admin_handled'],
+            ]);
+
+            $message = $validated['is_admin_handled'] 
+                ? 'Chat berhasil diambil alih oleh admin.' 
+                : 'Chat dikembalikan ke AI.';
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'is_admin_handled' => $customer->is_admin_handled,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error toggling delegation', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengubah delegasi: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Send message via WhatsApp service
      * Calls the wa-service API
      */

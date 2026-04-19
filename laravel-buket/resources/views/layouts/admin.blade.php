@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     @vite(['resources/css/admin.css', 'resources/js/admin.js'])
     @yield('extra-css')
+    @stack('styles')
 </head>
 <body>
     <!-- Navbar -->

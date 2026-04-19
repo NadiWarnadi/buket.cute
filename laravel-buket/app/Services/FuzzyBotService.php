@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FuzzyRule;
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Support\Facades\Log;
 
 class FuzzyBotService
@@ -190,19 +191,17 @@ class FuzzyBotService
     private function generateCatalogResponse(): string
     {
         try {
-            // Get unique categories from products
-            $categories = Product::select('category')
-                ->distinct()
-                ->where('is_active', true)
-                ->orderBy('category')
-                ->pluck('category')
+            $categories = Category::whereHas('products', function ($query) {
+                    $query->where('is_active', true);
+                })
+                ->orderBy('name')
+                ->pluck('name')
                 ->toArray();
 
             if (empty($categories)) {
                 return 'Maaf ka, katalog produk sedang tidak tersedia. Silakan coba lagi nanti.';
             }
 
-            // Format categories for response
             $categoryList = implode(', ', $categories);
 
             return "Ini katalog produk terbaik kami ka 🌸. Ada {$categoryList}. Kakak tertarik yang mana?";
@@ -212,7 +211,6 @@ class FuzzyBotService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            // Fallback to static response
             return 'Ini katalog produk terbaik kami ka 🌸. Ada Buket Mawar, Snack Bouquet, Hampers, dan Bouquet Wisuda. Kakak tertarik yang mana?';
         }
     }
