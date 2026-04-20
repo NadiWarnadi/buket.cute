@@ -75,6 +75,10 @@ class OrderFlowManager
                 $this->collectAddress($message, $customer);
                 break;
 
+            case ConversationManager::STATE_ORDERING_PAYMENT:
+                $this->collectPaymentMethod($message, $customer);
+                break;
+
             case ConversationManager::STATE_ORDERING_CONFIRMING:
                 $this->handleConfirmation($message, $customer);
                 break;
@@ -255,14 +259,22 @@ protected function askConfirmation(Customer $customer, OrderDraft $draft): void
      */
     protected function collectProduct(string $message, Customer $customer): void
     {
-        if ($this->isCatalogRequest($message)) {
-        $this->sendProductCatalog($customer);
-        return; // tetap di state collecting_product
-    }
         // Gunakan ProductMatcher untuk mencari produk
         $matchResult = $this->productMatcher->match($message);
+
+        // Jika deteksi sebagai pertanyaan katalog, tampilkan daftar produk
+        if ($matchResult['is_catalog_question'] ?? false) {
+            $this->sendProductCatalog($customer);
+            return; // Tetap di state collecting_product
+        }
+
+        if ($this->isCatalogRequest($message)) {
+            $this->sendProductCatalog($customer);
+            return; // tetap di state collecting_product
+        }
+
         if ($matchResult['matched']) {
-            // Produk ditemukan (single match)
+            // Produk ditemukan (single match dengan confidence tinggi)
             $product = $matchResult['product'];
             $draft = $this->draftService->getOrCreateDraft($customer);
             $data = $draft->data ?? [];
@@ -371,15 +383,17 @@ protected function askConfirmation(Customer $customer, OrderDraft $draft): void
             $data = $draft->data ?? [];
             $data['customer_address'] = $address;
             $draft->data = $data;
-            $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
+            $draft->step = ConversationManager::STATE_ORDERING_PAYMENT;
             $draft->save();
 
-            $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
+            $this->conv->setState(ConversationManager::STATE_ORDERING_PAYMENT);
 
-            // Generate ringkasan pesanan
-            $summary = $this->paramValidator->formatOrderSummary($draft->data);
-            $confirmMsg = "Baik, ini ringkasan pesanan Kakak:\n\n{$summary}\n\nApakah sudah benar? Ketik 'iya' untuk lanjut, atau 'ubah' jika ada yang salah.";
-            $this->replySender->sendAndRecordQuestion($this->conv, $confirmMsg);
+            // Tanya metode pembayaran
+            $paymentMsg = "Baik, alamat sudah tercatat. Sekarang pilih metode pembayaran:\n\n" .
+                         "1. 💰 COD (Bayar di tempat)\n" .
+                         "2. 🏦 Transfer Bank\n\n" .
+                         "Ketik '1' untuk COD atau '2' untuk Transfer Bank.";
+            $this->replySender->sendAndRecordQuestion($this->conv, $paymentMsg);
             return;
         }
 
@@ -387,6 +401,46 @@ protected function askConfirmation(Customer $customer, OrderDraft $draft): void
             "Alamatnya kurang jelas. Bisa tulis alamat lengkap? Contoh: Jl. Merdeka No. 10, Bandung",
             ConversationManager::STATE_ORDERING_ADDRESS
         );
+    }
+
+    /**
+     * Kumpulkan metode pembayaran
+     */
+    protected function collectPaymentMethod(string $message, Customer $customer): void
+    {
+        $message = strtolower(trim($message));
+
+        $paymentMethod = null;
+        if ($message === '1' || strpos($message, 'cod') !== false || strpos($message, 'bayar di tempat') !== false) {
+            $paymentMethod = 'cod';
+        } elseif ($message === '2' || strpos($message, 'transfer') !== false || strpos($message, 'bank') !== false) {
+            $paymentMethod = 'bank_transfer';
+        }
+
+        if ($paymentMethod) {
+            $draft = $this->draftService->getOrCreateDraft($customer);
+            $data = $draft->data ?? [];
+            $data['payment_method'] = $paymentMethod;
+            $draft->data = $data;
+            $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
+            $draft->save();
+
+            $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
+
+            // Generate ringkasan pesanan dengan metode pembayaran
+            $summary = $this->paramValidator->formatOrderSummary($draft->data);
+            $paymentName = $paymentMethod === 'cod' ? 'COD (Bayar di tempat)' : 'Transfer Bank';
+            $confirmMsg = "Baik, metode pembayaran: {$paymentName}\n\nIni ringkasan lengkap pesanan Kakak:\n\n{$summary}\n\nApakah sudah benar? Ketik 'iya' untuk konfirmasi, atau 'ubah' jika ada yang salah.";
+            $this->replySender->sendAndRecordQuestion($this->conv, $confirmMsg);
+            return;
+        }
+
+        // Metode pembayaran tidak valid
+        $retryMsg = "Metode pembayaran tidak valid. Silakan pilih:\n\n" .
+                   "1. 💰 COD (Bayar di tempat)\n" .
+                   "2. 🏦 Transfer Bank\n\n" .
+                   "Ketik '1' atau '2'.";
+        $this->replySender->sendAndRecordQuestion($this->conv, $retryMsg);
     }
 
     /**
@@ -462,8 +516,13 @@ protected function askConfirmation(Customer $customer, OrderDraft $draft): void
  */
 protected function isCatalogRequest(string $message): bool
 {
-    $keywords = ['katalog', 'list produk', 'daftar produk', 'produk apa saja', 'lihat produk'];
-    $lower = strtolower($message);
+    $keywords = [
+        'katalog', 'list produk', 'daftar produk', 'produk apa saja', 'lihat produk',
+        'apa saja', 'ada apa', 'apa aja', 'ada buket apa', 'punya apa',
+        'menu', 'pilihan', 'opsi', 'ada buket apa aja',
+        'lihat daftar', 'tampilkan produk', 'list buket'
+    ];
+    $lower = strtolower(trim($message));
     foreach ($keywords as $kw) {
         if (strpos($lower, $kw) !== false) {
             return true;
@@ -491,7 +550,14 @@ protected function sendProductCatalog(Customer $customer): void
         $list[] = ($i + 1) . ". {$p->name} - Rp " . number_format($p->price, 0, ',', '.');
     }
 
-    $msg = "📦 *Katalog Produk Buket Cute*\n\n" . implode("\n", $list) . "\n\nSilakan ketik nama produk yang ingin dipesan.";
+    // Simpan product candidates ke draft agar user bisa memilih dengan nomor
+    $draft = $this->draftService->getOrCreateDraft($customer);
+    $data = $draft->data ?? [];
+    $data['product_candidates'] = $products->pluck('id')->toArray();
+    $draft->data = $data;
+    $draft->save();
+
+    $msg = "📦 *Katalog Produk Buket Cute*\n\n" . implode("\n", $list) . "\n\nSilakan ketik nomor atau nama produk yang ingin dipesan. Contoh: ketik '1' atau 'buket mawar'.";
     $this->replySender->send($customer, $msg);
     $this->conv->setLastQuestion($msg);
 }

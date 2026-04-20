@@ -14,6 +14,7 @@ class ParameterValidationService
         'customer_address',
         'product_id',
         'quantity',
+        'payment_method',
     ];
 
     /**
@@ -50,6 +51,14 @@ class ParameterValidationService
 
         if (!empty($data['customer_address']) && strlen($data['customer_address']) < 5) {
             $errors[] = 'Alamat terlalu pendek (minimal 5 karakter)';
+        }
+
+        // Validate payment method
+        if (!empty($data['payment_method'])) {
+            $validMethods = ['cod', 'bank_transfer'];
+            if (!in_array($data['payment_method'], $validMethods)) {
+                $errors[] = 'Metode pembayaran tidak valid';
+            }
         }
 
         return [
@@ -174,6 +183,11 @@ class ParameterValidationService
 
         if (!empty($data['customer_address'])) {
             $summary[] = "Alamat: {$data['customer_address']}";
+        }
+
+        if (!empty($data['payment_method'])) {
+            $paymentName = $data['payment_method'] === 'cod' ? 'COD (Bayar di tempat)' : 'Transfer Bank';
+            $summary[] = "Pembayaran: {$paymentName}";
         }
 
         return implode("\n", $summary);

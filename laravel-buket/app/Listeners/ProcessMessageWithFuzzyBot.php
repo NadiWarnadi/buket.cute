@@ -11,6 +11,7 @@ use App\Services\Chatbot\OrderFlowManager;
 use App\Services\Chatbot\ReplySender;
 use App\Services\FuzzyBotService;
 use App\Services\OrderDraftService;
+use App\Services\PaymentManager;
 use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,19 +23,22 @@ class ProcessMessageWithFuzzyBot
     protected OrderDraftService $orderDraftService;
     protected IntentClassifier $intentClassifier;
     protected ReplySender $replySender;
+    protected PaymentManager $paymentManager;
 
     public function __construct(
         FuzzyBotService $fuzzyBotService,
         WhatsAppService $whatsappService,
         OrderDraftService $orderDraftService,
         IntentClassifier $intentClassifier,
-        ReplySender $replySender
+        ReplySender $replySender,
+        PaymentManager $paymentManager
     ) {
         $this->fuzzyBotService = $fuzzyBotService;
         $this->whatsappService = $whatsappService;
         $this->orderDraftService = $orderDraftService;
         $this->intentClassifier = $intentClassifier;
         $this->replySender = $replySender;
+        $this->paymentManager = $paymentManager;
     }
 
     public function handle(WhatsAppMessageReceived $event): void
@@ -42,6 +46,7 @@ class ProcessMessageWithFuzzyBot
         $message = $event->message;
         $payload = $event->payload;    // <-- array dari webhook controller
         $traceId = uniqid('trace_', true);
+     
 
         // 1. Cegah pemrosesan pesan dari nomor bisnis sendiri
         if ($message->from === config('services.whatsapp.business_phone')) {
@@ -63,17 +68,23 @@ class ProcessMessageWithFuzzyBot
             return;
         }
 
-        // 3. Hanya proses tipe yang relevan
-        if (!in_array($message->type, ['text', 'conversation', 'chat', 'extendedtext']) || empty($message->body)) {
-            return;
-        }
-
         // 4. Dapatkan customer
         $customer = Customer::where('phone', $message->from)->first();
         if (!$customer) {
             $customer = Customer::create(['phone' => $message->from]);
         }
         $message->update(['customer_id' => $customer->id]);
+
+        // 5. Cek jika ini adalah bukti pembayaran (image message)
+        if ($message->type === 'image') {
+            $this->handlePaymentProof($message, $customer);
+            return; // Jangan proses sebagai pesan teks biasa
+        }
+
+        // 6. Hanya proses tipe yang relevan
+        if (!in_array($message->type, ['text', 'conversation', 'chat', 'extendedtext']) || empty($message->body)) {
+            return;
+        }
 
         // 5. Inisialisasi service‑service utama
         $conv = new ConversationManager($customer);
@@ -219,6 +230,52 @@ class ProcessMessageWithFuzzyBot
             // Fallback jika tidak ada yang cocok
             $fallback = "Maaf, saya belum mengerti. Bisa tanyakan hal lain atau ketik 'bantuan' untuk admin.";
             $this->replySender->send($customer, $fallback);
+        }
+    }
+
+    /**
+     * Tangani bukti pembayaran (image message)
+     */
+    protected function handlePaymentProof(Message $message, Customer $customer): void
+    {
+        // Cari order pending payment untuk customer ini
+        $pendingOrder = $customer->orders()
+            ->where('payment_method', 'bank_transfer')
+            ->where('payment_status', 'pending')
+            ->latest()
+            ->first();
+
+        if (!$pendingOrder) {
+            // Tidak ada order pending, kirim pesan bahwa bukti tidak diharapkan
+            $this->replySender->send($customer, "Terima kasih telah mengirim gambar. Jika ini bukti pembayaran, silakan lakukan pemesanan terlebih dahulu atau hubungi admin untuk bantuan.");
+            return;
+        }
+
+        // Proses bukti pembayaran
+        $result = $this->paymentManager->processPaymentProof($message, $pendingOrder);
+
+        if ($result['success']) {
+            $confirmationMessage = "✅ *Bukti pembayaran diterima!*\n\n" .
+                                 "Pesanan Anda sedang diverifikasi oleh admin.\n" .
+                                 "Status pembayaran akan diupdate dalam 1-2 jam.\n\n" .
+                                 "Terima kasih telah berbelanja di Buket Cute! 🌸";
+
+            $this->replySender->send($customer, $confirmationMessage);
+
+            Log::channel('whatsapp')->info('Payment proof processed successfully', [
+                'customer_id' => $customer->id,
+                'order_id' => $pendingOrder->id,
+                'message_id' => $message->id,
+            ]);
+        } else {
+            $this->replySender->send($customer, "❌ " . $result['error'] . "\n\nSilakan kirim ulang bukti pembayaran yang jelas atau hubungi admin untuk bantuan.");
+
+            Log::channel('whatsapp')->warning('Payment proof processing failed', [
+                'customer_id' => $customer->id,
+                'order_id' => $pendingOrder->id,
+                'message_id' => $message->id,
+                'error' => $result['error'],
+            ]);
         }
     }
 }

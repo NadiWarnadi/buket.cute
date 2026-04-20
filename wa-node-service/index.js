@@ -9,6 +9,7 @@ const WhatsAppService = require('./services/whatsapp');
 const { sendToLaravel } = require('./services/webhook');
 const authMiddleware = require('./middlewares/auth');
 const { processPendingJobs, getQueueStats } = require('./services/queue');
+const { cleanupOldJobs } = require('./services/queue');
 
 const app = express();
 app.use(express.json());
@@ -204,6 +205,11 @@ app.use((err, req, res, next) => {
     console.error('[System Error]', err.stack);
     res.status(500).json({ error: 'Internal Server Error' });
 });
+
+const CLEANUP_MS = (parseInt(process.env.QUEUE_CLEANUP_INTERVAL_HOURS) || 24) * 60 * 60 * 1000;
+setInterval(() => {
+    cleanupOldJobs();
+}, CLEANUP_MS);
 
 
 

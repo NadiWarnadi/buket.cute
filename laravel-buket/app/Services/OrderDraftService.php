@@ -142,6 +142,8 @@ class OrderDraftService
                     'total_price' => $draft->data['total_price'] ?? 0,
                     'status' => 'pending',
                     'notes' => $draft->data['raw_message'] ?? null,
+                    'payment_method' => $draft->data['payment_method'] ?? 'cod',
+                    'payment_status' => ($draft->data['payment_method'] ?? 'cod') === 'cod' ? 'paid' : 'pending',
                 ]);
 
                 // Create order item

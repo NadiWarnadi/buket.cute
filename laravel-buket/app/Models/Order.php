@@ -15,10 +15,15 @@ class Order extends Model
         'total_price',
         'status',
         'notes',
+        'payment_method',
+        'payment_status',
+        'payment_proof',
+        'payment_data',
     ];
 
     protected $casts = [
         'total_price' => 'decimal:2',
+        'payment_data' => 'array',
     ];
 
     /**

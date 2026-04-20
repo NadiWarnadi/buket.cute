@@ -12,6 +12,7 @@ class ConversationManager
     public const STATE_ORDERING_PRODUCT = 'collecting_product';
     public const STATE_ORDERING_QUANTITY = 'collecting_quantity';
     public const STATE_ORDERING_ADDRESS = 'collecting_address';
+    public const STATE_ORDERING_PAYMENT = 'selecting_payment';
     public const STATE_ORDERING_CONFIRMING = 'confirming';
 
     protected Customer $customer;

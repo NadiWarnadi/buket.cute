@@ -81,7 +81,7 @@ class ReplySender
     {
         $reflection = new \ReflectionClass($conv);
         $property = $reflection->getProperty('customer');
-        $property->setAccessible(true);
+        // $property->setAccessible(true);
         return $property->getValue($conv);
     }
 }

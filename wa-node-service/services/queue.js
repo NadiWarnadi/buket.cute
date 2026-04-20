@@ -9,6 +9,9 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { sendToLaravel } = require('./webhook'); // Akan kita modifikasi
 
+const CLEANUP_DAYS = parseInt(process.env.QUEUE_CLEANUP_DAYS) || 2; // Hapus failed setelah 2 hari
+const CLEANUP_INTERVAL_HOURS = parseInt(process.env.QUEUE_CLEANUP_INTERVAL_HOURS) || 24; // Jalankan setiap 24 jam
+
 // Konfigurasi dari environment atau default
 const DB_PATH = process.env.QUEUE_DB_PATH || path.join(__dirname, '../queue.db');
 const MAX_RETRY = parseInt(process.env.MAX_RETRY_ATTEMPTS) || 5;
@@ -131,8 +134,36 @@ function getQueueStats() {
     return { pending: pending.count, failed: failed.count };
 }
 
+function cleanupOldJobs() {
+    // Hitung batas waktu
+    const failedCutoff = new Date();
+    failedCutoff.setDate(failedCutoff.getDate() - CLEANUP_DAYS);
+    const failedCutoffStr = failedCutoff.toISOString();
+
+    // Hapus job failed yang sudah tua
+    const deletedFailed = db.prepare(`
+        DELETE FROM jobs 
+        WHERE status = 'failed' AND created_at < ?
+    `).run(failedCutoffStr);
+
+    // Hapus job processing yang stuck (last_attempt lebih dari 1 jam, anggap mati)
+    const stuckCutoff = new Date();
+    stuckCutoff.setHours(stuckCutoff.getHours() - 1);
+    const stuckCutoffStr = stuckCutoff.toISOString();
+    
+    const deletedStuck = db.prepare(`
+        DELETE FROM jobs 
+        WHERE status = 'processing' AND last_attempt < ?
+    `).run(stuckCutoffStr);
+
+    if (deletedFailed.changes > 0 || deletedStuck.changes > 0) {
+        console.log(`[Queue Cleanup] Dihapus ${deletedFailed.changes} job failed (umur > ${CLEANUP_DAYS} hari), ${deletedStuck.changes} job stuck`);
+    }
+}
+
 module.exports = {
     addJob,
     processPendingJobs,
-    getQueueStats
+    getQueueStats,
+     cleanupOldJobs 
 };
