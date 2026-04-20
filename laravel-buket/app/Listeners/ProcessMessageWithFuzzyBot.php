@@ -111,6 +111,7 @@ class ProcessMessageWithFuzzyBot
             ConversationManager::STATE_ORDERING_PRODUCT,
             ConversationManager::STATE_ORDERING_QUANTITY,
             ConversationManager::STATE_ORDERING_ADDRESS,
+             ConversationManager::STATE_ORDERING_PAYMENT, 
             ConversationManager::STATE_ORDERING_CONFIRMING,
         ];
 
@@ -123,6 +124,10 @@ class ProcessMessageWithFuzzyBot
         switch ($intent) {
     case 'greeting':
         $this->handleGreeting($conv, $customer, $payload);
+        break;
+    
+    case 'status':   // <-- tambah case ini
+        $this->handleStatusCheck($customer);
         break;
 
     case 'order':
@@ -232,6 +237,47 @@ class ProcessMessageWithFuzzyBot
             $this->replySender->send($customer, $fallback);
         }
     }
+
+    /**
+ * Handle cek status pesanan
+ */
+protected function handleStatusCheck(Customer $customer): void
+{
+    // Cari order terakhir customer (selain status 'completed' atau 'cancelled'? Sesuaikan)
+    $lastOrder = $customer->orders()
+        ->with('items.product')
+        ->latest()
+        ->first();
+
+    if (!$lastOrder) {
+        $this->replySender->send($customer, "Kak, belum ada pesanan atas nama Kakak. Yuk pesan dulu dengan ketik 'pesan' 😊");
+        return;
+    }
+
+    // Mapping status ke bahasa yang lebih ramah
+    $statusText = [
+        'pending' => '⏳ menunggu konfirmasi admin',
+        'processing' => '🔄 sedang diproses',
+        'shipped' => '🚚 dalam pengiriman',
+        'delivered' => '✅ sudah sampai tujuan',
+        'cancelled' => '❌ dibatalkan',
+    ][$lastOrder->status] ?? $lastOrder->status;
+
+    // Format detail pesanan
+    $items = [];
+    foreach ($lastOrder->items as $item) {
+        $items[] = "- {$item->product->name} x{$item->quantity} = Rp " . number_format($item->subtotal, 0, ',', '.');
+    }
+    $itemList = empty($items) ? "Tidak ada item" : implode("\n", $items);
+
+    $reply = "📦 *Status Pesanan #{$lastOrder->id}*\n\n" .
+             "{$itemList}\n\n" .
+             "Status: {$statusText}\n\n" .
+             "Tanggal: " . $lastOrder->created_at->format('d/m/Y H:i') . "\n\n" .
+             "Admin akan segera update ya. Terima kasih 🙏";
+
+    $this->replySender->send($customer, $reply);
+}
 
     /**
      * Tangani bukti pembayaran (image message)

@@ -136,6 +136,16 @@ class OrderDraftService
                     'address' => $draft->data['customer_address'] ?? $draft->customer->address,
                 ]);
 
+                $totalPrice = $draft->data['total_price'] ?? null;
+                    if ($totalPrice === null && !empty($draft->data['price']) && !empty($draft->data['quantity'])) {
+                        $totalPrice = $draft->data['price'] * $draft->data['quantity'];
+                        // Simpan kembali ke draft agar konsisten (opsional)
+                        $data = $draft->data;
+                        $data['total_price'] = $totalPrice;
+                        $draft->data = $data;
+                        $draft->save();
+                      }
+
                 // Create order
                 $order = \App\Models\Order::create([
                     'customer_id' => $draft->customer->id,

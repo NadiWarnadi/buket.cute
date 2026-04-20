@@ -14,6 +14,10 @@ class IntentClassifier
         if ($this->isGreeting($lower)) {
             return 'greeting';
         }
+        
+        if ($this->isStatusCheck($lower)) {
+            return 'status'; 
+        }
 
         if ($this->isOrderIntent($lower)) {
             return 'order';
@@ -80,4 +84,17 @@ class IntentClassifier
         }
         return false;
     }
+
+    protected function isStatusCheck(string $msg): bool
+{
+    $keywords = [
+        'status', 'pesanan saya', 'order saya', 'pesanan aku', 'order aku',
+        'cek status', 'mana pesanan', 'sudah sampai', 'proses', 'diproses',
+        'pengiriman', 'resi', 'tracking'
+    ];
+    foreach ($keywords as $kw) {
+        if (strpos($msg, $kw) !== false) return true;
+    }
+    return false;
+}
 }
