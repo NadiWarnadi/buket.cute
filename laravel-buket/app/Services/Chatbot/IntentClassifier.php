@@ -36,6 +36,8 @@ class IntentClassifier
             return 'help';
         }
 
+        if ($this->isComplaint($lower)) return 'complaint';
+
         // Default: FAQ atau unknown
         return 'faq';
     }
@@ -91,6 +93,18 @@ class IntentClassifier
         'status', 'pesanan saya', 'order saya', 'pesanan aku', 'order aku',
         'cek status', 'mana pesanan', 'sudah sampai', 'proses', 'diproses',
         'pengiriman', 'resi', 'tracking'
+    ];
+    foreach ($keywords as $kw) {
+        if (strpos($msg, $kw) !== false) return true;
+    }
+    return false;
+}
+protected function isComplaint(string $msg): bool
+{
+    $keywords = [
+        'komplain', 'complaint', 'keluhan', 'rusak', 'tidak sesuai', 'kecewa',
+        'marah', 'kesal', 'cacat', 'layu', 'basi', 'busuk', 'salah kirim',
+        'kurang', 'telat', 'hilang', 'pecah', 'sobek', 'kotor', 'saya komplain', 'goblok'
     ];
     foreach ($keywords as $kw) {
         if (strpos($msg, $kw) !== false) return true;

@@ -81,6 +81,9 @@
             <a href="{{ route('admin.fuzzy-rules.index') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.fuzzy-rules.index' || Route::currentRouteName() === 'admin.fuzzy-rules.create' || Route::currentRouteName() === 'admin.fuzzy-rules.edit' || Route::currentRouteName() === 'admin.fuzzy-rules.show') active @endif">
                 <i class="bi bi-robot"></i> Fuzzy Rules
             </a>
+            <a href="{{ route('admin.complaints.index') }}" class="sidebar-item @if(Route::currentRouteName() === 'admin.complaints.index' || Route::currentRouteName() === 'admin.complaints.show') active @endif">
+                <i class="bi bi-exclamation-triangle"></i> Komplain
+            </a>
             <div class="sidebar-item-group">
                 <a href="#reportDropdown" class="sidebar-item" data-bs-toggle="collapse" aria-expanded="false">
                     <i class="bi bi-file-earmark-text"></i> Laporan

@@ -115,6 +115,12 @@ class ProcessMessageWithFuzzyBot
             ConversationManager::STATE_ORDERING_CONFIRMING,
         ];
 
+        // Jika sedang dalam konfirmasi komplain
+        if ($state === ConversationManager::STATE_COMPLAINT_CONFIRMING) {
+            $this->handleComplaintConfirmation($conv, $customer, $userMessage);
+            return;
+        }
+
         if (in_array($state, $orderStates)) {
     // Jika state adalah bagian dari order flow, gunakan OrderFlowManager
             $this->handleOrder($conv, $customer, $userMessage);
@@ -138,6 +144,10 @@ class ProcessMessageWithFuzzyBot
     case 'cancel':
         $this->handleConfirmationOrCancel($conv, $customer, $userMessage, $intent);
         break;
+    
+    case 'complaint':
+         $this->handleComplaint($conv, $customer, $userMessage);
+    break;
 
     case 'help':
         $this->handleHelp($conv, $customer);
@@ -324,4 +334,101 @@ protected function handleStatusCheck(Customer $customer): void
             ]);
         }
     }
+    /**
+ * Handle complaint: cek apakah customer pernah order, lalu konfirmasi order terakhir
+ */
+protected function handleComplaint(ConversationManager $conv, Customer $customer, string $message): void
+{
+    // Cek apakah customer sudah pernah order
+    $lastOrder = $customer->orders()->latest()->first();
+    
+    if (!$lastOrder) {
+        // Belum pernah order
+        $this->replySender->send($customer, "Maaf Kak, sepertinya Kakak belum pernah pesan di Buket Cute. Kalau ada kendala atau pertanyaan, silakan cerita ya. Atau ketik 'pesan' untuk mulai memesan.");
+        $conv->reset();
+        return;
+    }
+
+    // Simpan pesan komplain sementara ke order draft
+    $draft = $this->orderDraftService->getOrCreateDraft($customer);
+    $draft->data = array_merge($draft->data ?? [], [
+        'complaint_message' => $message,
+        'complaint_order_id' => $lastOrder->id,
+    ]);
+    $draft->step = ConversationManager::STATE_COMPLAINT_CONFIRMING;
+    $draft->save();
+
+    // Set state
+    $conv->setState(ConversationManager::STATE_COMPLAINT_CONFIRMING);
+
+    // Kirim konfirmasi ke customer
+    $orderDate = $lastOrder->created_at->format('d/m/Y');
+    $productNames = $lastOrder->items->map(fn($item) => $item->product->name)->implode(', ');
+    $reply = "Maaf sekali atas ketidaknyamanannya, Kak 🙏.\n\n" .
+             "Apakah keluhan ini terkait pesanan terakhir Kakak pada *{$orderDate}* dengan produk: *{$productNames}*?\n\n" .
+             "Ketik 'iya' jika benar, atau 'tidak' jika keluhan untuk pesanan lain.";
+    $this->replySender->send($customer, $reply);
+}
+
+/**
+ * Handle konfirmasi dari customer setelah ditanya order terakhir
+ */
+protected function handleComplaintConfirmation(ConversationManager $conv, Customer $customer, string $message): void
+{
+    $lower = strtolower(trim($message));
+    $draft = $this->orderDraftService->getCustomerActiveDraft($customer);
+
+    if (!$draft || empty($draft->data['complaint_message'])) {
+        // Draft tidak valid, reset
+        $conv->reset();
+        $this->replySender->send($customer, "Maaf, terjadi kesalahan. Silakan ulangi komplain Anda.");
+        return;
+    }
+
+    if (in_array($lower, ['iya', 'ya', 'betul', 'benar', 'setuju'])) {
+        // Customer konfirmasi order tersebut
+        $orderId = $draft->data['complaint_order_id'] ?? null;
+        $complaintMessage = $draft->data['complaint_message'];
+
+        // Simpan complaint ke database
+        $complaint = \App\Models\Complaint::create([
+            'customer_id' => $customer->id,
+            'order_id' => $orderId,
+            'message' => $complaintMessage,
+            'status' => 'open',
+        ]);
+
+        // Hapus draft
+        $draft->delete();
+        $conv->reset();
+
+        // Kirim respon
+        $reply = "Baik, keluhan Kakak sudah kami catat dengan ID #{$complaint->id}.\n" .
+                 "Admin kami akan segera menghubungi maksimal 1 jam. Terima kasih kesabarannya 🙏";
+        $this->replySender->send($customer, $reply);
+        
+        // TODO: Kirim notifikasi ke admin (bisa via dashboard atau WhatsApp)
+    } 
+    elseif (in_array($lower, ['tidak', 'bukan', 'ngga', 'gak'])) {
+        // Bukan order terakhir, simpan tanpa order_id
+        $complaintMessage = $draft->data['complaint_message'];
+        $draft->delete();
+        $conv->reset();
+
+        $complaint = \App\Models\Complaint::create([
+            'customer_id' => $customer->id,
+            'order_id' => null,
+            'message' => $complaintMessage,
+            'status' => 'open',
+        ]);
+
+        $reply = "Baik, keluhan Kakak sudah kami catat dengan ID #{$complaint->id}.\n" .
+                 "Admin kami akan segera menghubungi maksimal 1 jam. Terima kasih 🙏";
+        $this->replySender->send($customer, $reply);
+    } 
+    else {
+        // Jawaban tidak jelas, ulangi pertanyaan
+        $this->replySender->send($customer, "Maaf, saya tidak mengerti. Ketik 'iya' jika keluhan untuk pesanan terakhir, atau 'tidak' jika untuk pesanan lain.");
+    }
+}
 }

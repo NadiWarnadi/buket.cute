@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ComplaintController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicController;
 use Illuminate\Support\Facades\Route;
@@ -92,6 +93,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('fuzzy-rules/import', [FuzzyRuleController::class, 'import'])->name('fuzzy-rules.import');
         Route::get('fuzzy-rules/export', [FuzzyRuleController::class, 'export'])->name('fuzzy-rules.export');
 
+        Route::resource('complaints', ComplaintController::class)->only(['index', 'show', 'update']);
         // Settings
         Route::prefix('settings')->group(function () {
             Route::get('/', [SettingController::class, 'index'])->name('settings.index');

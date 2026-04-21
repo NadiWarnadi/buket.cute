@@ -199,13 +199,19 @@ protected function askConfirmation(Customer $customer, OrderDraft $draft): void
                 'saya', 'nama', 'aku', 'dengan', 'dari', 'ini', 'itu',
             ];
 
+
+            $filteredWords = [];
             foreach ($words as $word) {
-                $clean = preg_replace('/[^a-zA-Z\s]/', '', $word);
-                $clean = strtolower(trim($clean));
-                if (strlen($clean) > 2 && !in_array($clean, $blacklist)) {
-                    $name = ucwords($clean);
-                    break;
-                }
+            $clean = preg_replace('/[^a-zA-Z]/', '', $word);
+            $clean = strtolower(trim($clean));
+            if (strlen($clean) > 2 && !in_array($clean, $blacklist)) {
+                $filteredWords[] = ucwords($clean);
+            }
+        }
+
+             if (!empty($filteredWords)) {
+            // Gabungkan semua kata yang lolos menjadi nama lengkap
+            $name = implode(' ', $filteredWords);
             }
 
             // Jika masih tidak dapat, coba ambil seluruh kalimat asalkan pendek dan tanpa angka

@@ -50,6 +50,13 @@ class Order extends Model
         return $this->hasMany(Message::class);
     }
 
+
+    
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
     /**
      * Scope untuk filter berdasarkan status
      */
