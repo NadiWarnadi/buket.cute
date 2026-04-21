@@ -16,25 +16,25 @@ if (php_sapi_name() === 'cli') {
 // Buat payload persis seperti yang dikirim Node.js
 $payload = [
     "type" => "conversation",
-    "from" => "62881023926516",
-    "sender_number" => "62881023926516",
+    "from" => "62881023926556",
+    "sender_number" => "62881023926556",
     "body" => $message,
     "content" => $message,
     "isGroup" => false,
     "timestamp" => time(),
     "message_id" => "TEST_" . uniqid(),
-    "pushname" => "╰(*°▽°*)╯",
+    "pushname" => "test_wa",
     "raw_message" => [
         "key" => [
             "remoteJid" => "103963995205780@lid",
-            "remoteJidAlt" => "62881023926516@s.whatsapp.net",
+            "remoteJidAlt" => "62881023926556@s.whatsapp.net",
             "fromMe" => false,
             "id" => "TEST_" . uniqid(),
             "participant" => "",
             "addressingMode" => "lid"
         ],
         "messageTimestamp" => time(),
-        "pushName" => "╰(*°▽°*)╯",
+        "pushName" => "test_wa",
         "broadcast" => false,
         "message" => [
             "conversation" => $message,

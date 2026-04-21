@@ -380,34 +380,46 @@ protected function askConfirmation(Customer $customer, OrderDraft $draft): void
      * Kumpulkan alamat pengiriman.
      */
     protected function collectAddress(string $message, Customer $customer): void
-    {
-        $extracted = $this->paramExtractor->extractParameters($message);
-        $address = $extracted['address'] ?? null;
+{
+    // 1. Coba ekstrak alamat via service
+    $extracted = $this->paramExtractor->extractParameters($message);
+    $address = $extracted['address'] ?? null;
 
-        if ($address && strlen($address) >= 5) {
-            $draft = $this->draftService->getOrCreateDraft($customer);
-            $data = $draft->data ?? [];
-            $data['customer_address'] = $address;
-            $draft->data = $data;
-            $draft->step = ConversationManager::STATE_ORDERING_PAYMENT;
-            $draft->save();
-
-            $this->conv->setState(ConversationManager::STATE_ORDERING_PAYMENT);
-
-            // Tanya metode pembayaran
-            $paymentMsg = "Baik, alamat sudah tercatat. Sekarang pilih metode pembayaran:\n\n" .
-                         "1. 💰 COD (Bayar di tempat)\n" .
-                         "2. 🏦 Transfer Bank\n\n" .
-                         "Ketik '1' untuk COD atau '2' untuk Transfer Bank.";
-            $this->replySender->sendAndRecordQuestion($this->conv, $paymentMsg);
-            return;
+    // 2. Jika hasil ekstraksi tidak valid (null atau terlalu pendek), gunakan pesan asli
+    if (!$address || strlen($address) < 10) {
+        // Hapus kata "alamat" di awal (case insensitive) jika ada, lalu trim
+        $address = preg_replace('/^alamat\s+/i', '', trim($message));
+        // Jika setelah dihapus masih kosong, kembalikan ke pesan asli
+        if (strlen($address) < 5) {
+            $address = trim($message);
         }
-
-        $this->handleExtractionFailure(
-            "Alamatnya kurang jelas. Bisa tulis alamat lengkap? Contoh: Jl. Merdeka No. 10, Bandung",
-            ConversationManager::STATE_ORDERING_ADDRESS
-        );
     }
+
+    // 3. Validasi panjang minimal 5 karakter
+    if (strlen($address) >= 5) {
+        $draft = $this->draftService->getOrCreateDraft($customer);
+        $data = $draft->data ?? [];
+        $data['customer_address'] = $address;
+        $draft->data = $data;
+        $draft->step = ConversationManager::STATE_ORDERING_PAYMENT;
+        $draft->save();
+
+        $this->conv->setState(ConversationManager::STATE_ORDERING_PAYMENT);
+
+        $paymentMsg = "Baik, alamat sudah tercatat. Sekarang untuk metode pembayaran bagaimana:\n\n" .
+                     "1. 💰 COD (Bayar di tempat)\n" .
+                     "2. 🏦 Transfer Bank\n\n" .
+                     "Ketik '1' untuk COD atau '2' untuk Transfer Bank.";
+        $this->replySender->sendAndRecordQuestion($this->conv, $paymentMsg);
+        return;
+    }
+
+    // 4. Gagal total, minta ulang
+    $this->handleExtractionFailure(
+        "Alamatnya kurang jelas. Bisa tulis alamat lengkap? Contoh: Jl. Merdeka No. 10, Indramayu, Desa Sukamulya RT 02 RW 03",
+        ConversationManager::STATE_ORDERING_ADDRESS
+    );
+}
 
     /**
      * Kumpulkan metode pembayaran

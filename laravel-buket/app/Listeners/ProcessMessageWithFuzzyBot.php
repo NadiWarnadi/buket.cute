@@ -280,12 +280,28 @@ protected function handleStatusCheck(Customer $customer): void
     }
     $itemList = empty($items) ? "Tidak ada item" : implode("\n", $items);
 
-    $reply = "📦 *Status Pesanan #{$lastOrder->id}*\n\n" .
-             "{$itemList}\n\n" .
-             "Status: {$statusText}\n\n" .
-             "Tanggal: " . $lastOrder->created_at->format('d/m/Y H:i') . "\n\n" .
-             "Admin akan segera update ya. Terima kasih 🙏";
-
+      $reply = "📦 *Status Pesanan #{$lastOrder->id}*\n\n";
+    $reply .= "{$itemList}\n\n";
+    $reply .= "Status: {$statusText}\n\n";
+    $reply .= "Tanggal: " . $lastOrder->created_at->format('d/m/Y H:i') . "\n\n";
+     // Tambahkan pesan tambahan berdasarkan status dan metode pembayaran
+    if ($lastOrder->status === 'completed') {
+        if ($lastOrder->payment_method === 'cod') {
+            $reply .= "✅ *Buket sudah siap, Kak!*\nSilakan ambil di tempat ya. Terima kasih sudah berbelanja di Buket Cute! 🌸";
+        } else {
+            $reply .= "✅ *Pesanan selesai!*\nTerima kasih sudah berbelanja di Buket Cute. Sampai jumpa lagi! 🌸";
+        }
+    } elseif ($lastOrder->status === 'processed') {
+        if ($lastOrder->payment_method === 'cod') {
+            $reply .= "🔄 *Pesanan sedang dibuat.*\nKami akan kabari jika sudah siap diambil. Terima kasih kesabarannya 🙏";
+        } else {
+            $reply .= "🔄 *Pesanan sedang diproses.*\nAdmin akan segera mengupdate status. Terima kasih 🙏";
+        }
+    } elseif ($lastOrder->status === 'pending') {
+        $reply .= "⏳ *Menunggu konfirmasi admin.*\nKami akan segera memproses pesanan Anda. Terima kasih 🙏";
+    } elseif ($lastOrder->status === 'cancelled') {
+        $reply .= "❌ Pesanan ini dibatalkan. Jika ada kendala, silakan hubungi admin.";
+    }    
     $this->replySender->send($customer, $reply);
 }
 
