@@ -25,7 +25,7 @@
             <a class="navbar-brand" href="{{ route('public.home') }}">
                  <img src="{{ asset('images/logo.png') }}" 
          alt="Logo" 
-         class="brand-logo"> Buket Cute
+         class="brand-logo"> Buket Cutie
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>

@@ -6,7 +6,7 @@
 <!-- Hero Section -->
 <section class="hero mb-4">
     <div class="container">
-        <h1>📚 Katalog Produk</h1>
+        <h1>Katalog Produk</h1>
         <p>Jelajahi koleksi lengkap bunga dan hamper kami</p>
     </div>
 </section>

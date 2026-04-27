@@ -148,7 +148,7 @@ class PublicController extends Controller
         }
 
         // Get store WhatsApp from env
-        $storeWhatsApp = env('STORE_WHATSAPP', '6281234567890');
+        $storeWhatsApp = env('STORE_WHATSAPP');
         $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=".urlencode($message);
 
         return back()->with('success', 'Silakan klik tombol WhatsApp di bawah untuk mengirim permintaan custom Anda!')
