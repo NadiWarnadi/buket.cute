@@ -54,8 +54,12 @@ namespace App\Models{
  * @property string|null $name
  * @property string $phone
  * @property string|null $address
+ * @property string|null $last_activity_at
+ * @property string|null $current_context
+ * @property int|null $current_state_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\MasterState|null $currentState
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Message> $messages
  * @property-read int|null $messages_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrderDraft> $orderDrafts
@@ -67,7 +71,10 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereAddress($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereCurrentContext($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereCurrentStateId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereLastActivityAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer wherePhone($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Customer whereUpdatedAt($value)
@@ -83,6 +90,9 @@ namespace App\Models{
  * @property float $confidence_threshold
  * @property string $action
  * @property string|null $response_template
+ * @property string|null $context_slug
+ * @property string|null $next_context
+ * @property int $priority
  * @property bool $is_active
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -91,11 +101,14 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereAction($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereConfidenceThreshold($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereContextSlug($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereIntent($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereNextContext($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule wherePattern($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule wherePriority($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereResponseTemplate($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|FuzzyRule whereUpdatedAt($value)
  */
@@ -133,6 +146,43 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Ingredient whereUpdatedAt($value)
  */
 	class Ingredient extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $type
+ * @property string|null $prompt_text
+ * @property string|null $input_key
+ * @property array<array-key, mixed>|null $validation_rules
+ * @property string|null $fuzzy_context
+ * @property int|null $next_state_id
+ * @property int|null $fallback_state_id
+ * @property array<array-key, mixed>|null $prerequisite_keys
+ * @property string|null $resume_message
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read MasterState|null $fallbackState
+ * @property-read MasterState|null $nextState
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereFallbackStateId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereFuzzyContext($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereInputKey($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereNextStateId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState wherePrerequisiteKeys($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState wherePromptText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereResumeMessage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|MasterState whereValidationRules($value)
+ */
+	class MasterState extends \Eloquent {}
 }
 
 namespace App\Models{
@@ -183,6 +233,9 @@ namespace App\Models{
  * @property string $from
  * @property string $to
  * @property string $body
+ * @property string|null $media_path
+ * @property string|null $media_url
+ * @property string|null $file_name
  * @property string $type
  * @property string|null $status
  * @property string $chat_status
@@ -192,6 +245,8 @@ namespace App\Models{
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Customer $customer
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Media> $media
+ * @property-read int|null $media_count
  * @property-read \App\Models\Order|null $order
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message activeFhats()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message byCustomer($customerId)
@@ -203,9 +258,12 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereChatStatus($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereCustomerId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereFileName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereFrom($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereIsIncoming($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereMediaPath($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereMediaUrl($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereMessageId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereOrderId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Message whereParsed($value)
@@ -253,6 +311,8 @@ namespace App\Models{
  * @property int $customer_id
  * @property array<array-key, mixed> $data
  * @property string $step
+ * @property numeric|null $custom_sub_state
+ * @property int $is_custom
  * @property \Illuminate\Support\Carbon|null $expires_at
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -261,10 +321,12 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereCustomSubState($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereCustomerId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereData($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereExpiresAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereIsCustom($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereStep($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderDraft whereUpdatedAt($value)
  */

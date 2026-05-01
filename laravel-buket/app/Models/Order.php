@@ -15,10 +15,12 @@ class Order extends Model
         'total_price',
         'status',
         'notes',
+        'custom_sub_state', 'is_custom',
     ];
 
     protected $casts = [
         'total_price' => 'decimal:2',
+        'is_custom' => 'boolean',
     ];
 
     /**

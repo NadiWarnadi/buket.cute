@@ -13,6 +13,7 @@ class Customer extends Model
         'name',
         'phone',
         'address',
+        'current_state_id', 'last_activity_at',
     ];
 
     // Relasi dengan Order
@@ -20,6 +21,11 @@ class Customer extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function currentState()
+{
+    return $this->belongsTo(MasterState::class, 'current_state_id');
+}
 
     // Relasi dengan Message
     public function messages(): HasMany

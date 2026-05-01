@@ -9,101 +9,90 @@ class FuzzyRuleSeeder extends Seeder
 {
     public function run(): void
     {
-        // Kosongkan tabel dulu agar tidak duplikat saat testing
+        // Kosongkan tabel dulu agar tidak duplikat
         FuzzyRule::truncate();
 
         $rules = [
-            // ========== 1. ORDER FLOW (PRIORITY TERTINGGI) ==========
+            // ========== GLOBAL INTENT (dipantau di semua state) ==========
+            [
+                'intent' => 'ORDER_FROM_WEB',
+                'pattern' => 'Saya ingin pesan:',
+                'confidence_threshold' => 0.9,
+                'action' => 'ORDER_FROM_WEB',
+                'response_template' => null,
+                'context_slug' => 'intent_global',
+                'next_context' => null,
+                'priority' => 98,
+                'is_active' => true,
+            ],
+            [
+                'intent' => 'CEK_STATUS',
+                'pattern' => 'cek status|lacak|tracking|status pesanan|dimana pesanan|kurir',
+                'confidence_threshold' => 0.8,
+                'action' => 'CEK_STATUS',
+                'response_template' => null,
+                'context_slug' => 'intent_global',
+                'next_context' => '8',
+                'priority' => 95,
+                'is_active' => true,
+            ],
+            [
+                'intent' => 'KOMPLAIN',
+                'pattern' => 'komplain|keluhan|kecewa|tidak sesuai|rusak|admin|bantuan',
+                'confidence_threshold' => 0.8,
+                'action' => 'KOMPLAIN',
+                'response_template' => null,
+                'context_slug' => 'intent_global',
+                'next_context' => '9',
+                'priority' => 95,
+                'is_active' => true,
+            ],
+
+            // ========== ORDER FLOW (PRIORITY TERTINGGI) ==========
             [
                 'intent' => 'order_start',
-                'pattern' => 'pesan|order|beli|buatkan|pesen|mau beli|mau pesan|mohon pesan|order dong|order buket|bikin buket|request buket|booking|pesan buket|beli buket|mau order',
-                'confidence_threshold' => 0.7,
-                'action' => 'order',
-                'response_template' => null,
-                'context_slug' => null,
-                'next_context' => 'collecting_order',
-                'priority' => 100,
+                'pattern' => 'pesan|order|beli|buatkan|mau beli|mau pesan|bikin buket|request buket|booking|pesan buket',
+                'confidence_threshold' => 0.75,
+                'action' => 'reply',
+                'response_template' => 'Baik, Kak. Siapa nama Kakak?',
+                'context_slug' => 'new_order',
+                'next_context' => '2',
+                'priority' => 90,
                 'is_active' => true,
             ],
             [
                 'intent' => 'confirm_yes',
-                'pattern' => 'iya|ya|ok|oke|okee|siap|benar|betul|lanjut|confirm|jadi|yup|yoi|oke siap|udah bener|deal|sip|iya deh|ya deh|oke deh',
-                'confidence_threshold' => 0.8,
+                'pattern' => 'iya|ya|ok|oke|siap|benar|betul|lanjut|confirm|jadi|yoi|deal|sip',
+                'confidence_threshold' => 0.85,
                 'action' => 'confirm_order',
-                'response_template' => null,
                 'context_slug' => 'confirming',
-                'next_context' => 'order_completed',
-                'priority' => 90,
+                'next_context' => '7',
+                'priority' => 85,
                 'is_active' => true,
             ],
             [
                 'intent' => 'confirm_no',
-                'pattern' => 'tidak|nggak|ngga|gak|batal|cancel|salah|ubah|ganti|jangan|nope|tidak jadi|ulang|ga jadi|ga mau',
-                'confidence_threshold' => 0.8,
-                'action' => 'reply',
-                'response_template' => 'Siap ka, pesanan dibatalkan. Mari kita mulai ulang ya. Boleh tau nama Kakak siapa?',
+                'pattern' => 'tidak|nggak|gak|batal|cancel|salah|ubah|ganti|jangan|ulang',
+                'confidence_threshold' => 0.85,
+                'action' => 'restart_collection',
+                'response_template' => 'Baik, kita mulai ulang. Siapa nama Kakak?',
                 'context_slug' => 'confirming',
-                'next_context' => 'collecting_name',
-                'priority' => 90,
+                'next_context' => '2',
+                'priority' => 85,
                 'is_active' => true,
             ],
 
-            // ========== 2. PRODUK & KATALOG (DIIMPROVE) ==========
+            // ========== PRODUK & KATALOG ==========
             [
                 'intent' => 'show_catalog',
-                'pattern' => 'katalog|lihat produk|daftar produk|pilihan buket|menu|ready apa aja|contoh buket|pilihan bunga|liat liat|produk apa|ada apa|apa saja|lihat katalog|cek produk|produknya apa',
-                'confidence_threshold' => 0.6,
+                'pattern' => 'katalog|lihat produk|daftar produk|menu|contoh buket|pilihan bunga|liat liat|produk apa|cek produk',
+                'confidence_threshold' => 0.7,
                 'action' => 'show_product',
-                'response_template' => null, // Will be generated dynamically from database
                 'context_slug' => null,
-                'next_context' => null,
                 'priority' => 70,
                 'is_active' => true,
             ],
-            [
-                'intent' => 'product_mawar',
-                'pattern' => 'buket mawar|mawar|buket bunga mawar|rose bouquet|mawar merah|mawar putih|mawar pink|mawar kuning',
-                'confidence_threshold' => 0.7,
-                'action' => 'reply',
-                'response_template' => 'Buket Mawar kami ada berbagai warna: Merah, Putih, Pink, Kuning. Harga mulai Rp 75rb. Mau yang mana ka?',
-                'context_slug' => null,
-                'next_context' => 'collecting_order',
-                'priority' => 65,
-                'is_active' => true,
-            ],
-            [
-                'intent' => 'product_snack',
-                'pattern' => 'snack bouquet|bouquet snack|buket snack|snack|makanan|kue|chocolate|permen|snack box',
-                'confidence_threshold' => 0.7,
-                'action' => 'reply',
-                'response_template' => 'Snack Bouquet kami berisi berbagai camilan dan bunga cantik. Harga mulai Rp 100rb. Cocok untuk surprise!',
-                'context_slug' => null,
-                'next_context' => 'collecting_order',
-                'priority' => 65,
-                'is_active' => true,
-            ],
-            [
-                'intent' => 'product_hamper',
-                'pattern' => 'hamper|parcel|paket|gift box|kado|hadiah|surprise box|hamper ulang tahun',
-                'confidence_threshold' => 0.7,
-                'action' => 'reply',
-                'response_template' => 'Hampers kami berisi bunga + snack premium. Harga mulai Rp 150rb. Perfect untuk ulang tahun atau anniversary!',
-                'context_slug' => null,
-                'next_context' => 'collecting_order',
-                'priority' => 65,
-                'is_active' => true,
-            ],
-            [
-                'intent' => 'product_wisuda',
-                'pattern' => 'wisuda|graduation|bouquet wisuda|buket wisuda|selamat wisuda|tamatan|kuliah selesai',
-                'confidence_threshold' => 0.7,
-                'action' => 'reply',
-                'response_template' => 'Bouquet Wisuda kami spesial dengan bunga dan ucapan selamat. Harga mulai Rp 125rb. Ada berbagai ukuran!',
-                'context_slug' => null,
-                'next_context' => 'collecting_order',
-                'priority' => 65,
-                'is_active' => true,
-            ],
+           
             [
                 'intent' => 'price_inquiry',
                 'pattern' => 'harga|berapa|harganya|pricelist|biaya|berapaan|ongkir|cek harga|mahal ga|price|murah ga|range harga',
@@ -116,42 +105,39 @@ class FuzzyRuleSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ========== 3. PARAMETER COLLECTION (BARU) ==========
+            // ========== PARAMETER COLLECTION ==========
             [
                 'intent' => 'provide_name',
-                'pattern' => 'nama saya|nma|aku|gue|gue adalah|saya adalah|namaku|nama ku',
+                'pattern' => 'nama saya|aku|gue|saya adalah|namaku|nama ku|panggil saya',
                 'confidence_threshold' => 0.8,
                 'action' => 'collect_name',
-                'response_template' => null,
                 'context_slug' => 'collecting_name',
-                'next_context' => 'collecting_product',
-                'priority' => 85,
-                'is_active' => true,
-            ],
-            [
-                'intent' => 'provide_address',
-                'pattern' => 'alamat|tinggal di|di|rumah|lokasi|tempat tinggal|kirim ke|antar ke',
-                'confidence_threshold' => 0.7,
-                'action' => 'collect_address',
-                'response_template' => null,
-                'context_slug' => 'collecting_address',
-                'next_context' => 'collecting_quantity',
-                'priority' => 85,
+                'next_context' => '3',
+                'priority' => 80,
                 'is_active' => true,
             ],
             [
                 'intent' => 'provide_quantity',
                 'pattern' => 'biji|buket|pcs|buah|tangkai|ikat|set|piece|qty|jumlah',
-                'confidence_threshold' => 0.6,
+                'confidence_threshold' => 0.7,
                 'action' => 'collect_quantity',
-                'response_template' => null,
                 'context_slug' => 'collecting_quantity',
-                'next_context' => 'confirming',
-                'priority' => 85,
+                'next_context' => '5',
+                'priority' => 80,
+                'is_active' => true,
+            ],
+            [
+                'intent' => 'provide_address',
+                'pattern' => 'alamat|tinggal di|di|rumah|lokasi|kirim ke|antar ke',
+                'confidence_threshold' => 0.7,
+                'action' => 'collect_address',
+                'context_slug' => 'collecting_address',
+                'next_context' => '6',
+                'priority' => 80,
                 'is_active' => true,
             ],
 
-            // ========== 4. GREETING & HELP ==========
+            // ========== GREETING & HELP ==========
             [
                 'intent' => 'greeting',
                 'pattern' => 'halo|hai|hay|hello|hey|hi|assalamualaikum|asalamualaikum|salam|pagi|siang|sore|malam|p|punten|spada|selamat datang',
@@ -175,20 +161,7 @@ class FuzzyRuleSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ========== 5. ADMIN & COMPLAINT ==========
-            [
-                'intent' => 'escalate_admin',
-                'pattern' => 'admin|operator|manusia|komplain|masalah|rusak|operator|panggil admin|hubungi admin|bicara admin|bicara orang',
-                'confidence_threshold' => 0.7,
-                'action' => 'escalate',
-                'response_template' => 'Baik ka, pesan Kakak segera diteruskan ke Admin kami. Mohon tunggu sebentar ya.',
-                'context_slug' => null,
-                'next_context' => null,
-                'priority' => 80,
-                'is_active' => true,
-            ],
-
-            // ========== 6. CLOSING ==========
+            // ========== CLOSING ==========
             [
                 'intent' => 'closing',
                 'pattern' => 'terima kasih|thanks|makasih|nuhun|syukron|ok tks|thank you|dah|bye|bye bye|sampai jumpa|dadah',
@@ -201,11 +174,11 @@ class FuzzyRuleSeeder extends Seeder
                 'is_active' => true,
             ],
 
-            // ========== 7. FALLBACK (PASIF) ==========
+            // ========== FALLBACK ==========
             [
                 'intent' => 'default_fallback',
                 'pattern' => 'bot_internal_fallback_logic',
-                'confidence_threshold' => 1.0, 
+                'confidence_threshold' => 1.0,
                 'action' => 'manual_review',
                 'response_template' => 'Maaf ka, saya belum paham maksudnya. Bisa ketik "Bantuan" untuk melihat instruksi?',
                 'context_slug' => null,

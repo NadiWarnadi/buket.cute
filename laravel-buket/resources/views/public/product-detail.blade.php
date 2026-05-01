@@ -136,9 +136,9 @@
             <!-- Action Buttons -->
             <div class="d-grid gap-2 mb-4">
                 @if($product->stock > 0)
-                    <button class="btn btn-primary-custom btn-lg" id="orderBtn">
+                    <a href="javascript:void(0)" class="btn btn-primary-custom btn-lg" id="orderBtn">
                         💬 Pesan via WhatsApp
-                    </button>
+                    </a>
                     <a href="{{ route('public.customRequest') }}" class="btn btn-outline-primary-custom btn-lg">
                         ✏️ Minta Custom
                     </a>
@@ -287,10 +287,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const productId = {{ $product->id }};
     const productPrice = {{ $product->price }};
     const productName = "{{ $product->name }}";
-    const maxStock = {{ $product->stock }};
+    const storeWhatsApp = "{{ env('STORE_WHATSAPP', '6281234567890') }}";
 
     const quantityInput = document.getElementById('quantity');
     const totalPriceEl = document.getElementById('totalPrice');
@@ -305,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     decreaseBtn.addEventListener('click', () => {
-        const currentQty = parseInt(quantityInput.value);
+        let currentQty = parseInt(quantityInput.value);
         if (currentQty > 1) {
             quantityInput.value = currentQty - 1;
             updateTotalPrice();
@@ -313,40 +312,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     increaseBtn.addEventListener('click', () => {
-        const currentQty = parseInt(quantityInput.value);
-        if (currentQty < maxStock) {
+        let currentQty = parseInt(quantityInput.value);
+        if (currentQty < {{ $product->stock }}) {
             quantityInput.value = currentQty + 1;
             updateTotalPrice();
         }
     });
 
-    orderBtn.addEventListener('click', async () => {
+    orderBtn.addEventListener('click', () => {
         const quantity = parseInt(quantityInput.value);
-
-        try {
-            const response = await fetch('{{ route("public.orderToWhatsApp") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                },
-                body: JSON.stringify({
-                    product_id: productId,
-                    quantity: quantity
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.whatsapp_url) {
-                window.open(data.whatsapp_url, '_blank');
-            } else {
-                alert('Gagal membuat pesan. Silakan coba lagi.');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Terjadi kesalahan. Silakan coba lagi.');
-        }
+        const total = productPrice * quantity;
+        
+        const message = `Halo, saya ingin pesan:\n"${productName}"\nJumlah: ${quantity}\nTotal: Rp ${total.toLocaleString('id-ID')}`;
+        const encoded = encodeURIComponent(message);
+        const url = `https://wa.me/${storeWhatsApp}?text=${encoded}`;
+        window.open(url, '_blank');
     });
 });
 </script>

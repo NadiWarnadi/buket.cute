@@ -117,7 +117,8 @@ class FuzzyBotService
     /**
      * Calculate string similarity using levenshtein distance
      */
-    private function calculateSimilarity(string $str1, string $str2): float
+    // private function calculateSimilarity(string $str1, string $str2): float
+      public function calculateSimilarity(string $str1, string $str2): float
     {
         $len1 = strlen($str1);
         $len2 = strlen($str2);
@@ -187,35 +188,34 @@ class FuzzyBotService
     /**
      * Generate dynamic catalog response from database
      */
-    private function generateCatalogResponse(): string
-    {
-        try {
-            // Get unique categories from products
-            $categories = Product::select('category')
-                ->distinct()
-                ->where('is_active', true)
-                ->orderBy('category')
-                ->pluck('category')
-                ->toArray();
+    public function generateCatalogResponse(): string
+{
+    try {
+        $products = Product::where('is_active', true)
+            ->orderBy('name')
+            ->get(['name', 'price']); // ambil nama dan harga saja
 
-            if (empty($categories)) {
-                return 'Maaf ka, katalog produk sedang tidak tersedia. Silakan coba lagi nanti.';
-            }
-
-            // Format categories for response
-            $categoryList = implode(', ', $categories);
-
-            return "Ini katalog produk terbaik kami ka 🌸. Ada {$categoryList}. Kakak tertarik yang mana?";
-        } catch (\Exception $e) {
-            Log::error('Error generating catalog response', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            // Fallback to static response
-            return 'Ini katalog produk terbaik kami ka 🌸. Ada Buket Mawar, Snack Bouquet, Hampers, dan Bouquet Wisuda. Kakak tertarik yang mana?';
+        if ($products->isEmpty()) {
+            return 'Maaf ka, katalog produk sedang kosong. Silakan coba lagi nanti.';
         }
+
+        // Susun daftar produk
+        $catalogText = "🌸 *KATALOG BUKET CUTE* 🌸\n\n";
+        foreach ($products as $product) {
+            $catalogText .= "• {$product->name} – Rp " . number_format($product->price, 0, ',', '.') . "\n";
+        }
+
+        $catalogText .= "\nKetik nama produk yang kamu mau untuk pesan. 😊";
+        return $catalogText;
+
+    } catch (\Exception $e) {
+        Log::error('Error generating catalog response', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return 'Maaf, terjadi kesalahan saat mengambil katalog.';
     }
+}
 
     /**
      * Get all active rules grouped by intent

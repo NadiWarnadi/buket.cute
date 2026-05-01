@@ -160,9 +160,9 @@ class ParameterExtractionService
     {
         // Pattern: "nama saya ... " atau "saya ... "
         $patterns = [
-            '/nama\s+(?:saya\s+)?([A-Za-z\s]+?)(?:\s+(?:atau|alias)|,|\.|$)/i',
-            '/panggil\s+(?:saja\s+)?([A-Za-z\s]+?)(?:\s+(?:atau|alias)|,|\.|$)/i',
-            '/mau\s+pesan|saya\s+([A-Za-z]+)/i', // Fallback: first name after saya
+            '/nama\s+(?:saya\s+)?(.+?)(?:\s+(?:atau|alias)|,|\.|$)/i',
+            '/panggil\s+(?:saja\s+)?(.+?)(?:\s+(?:atau|alias)|,|\.|$)/i',
+            '/mau\s+pesan|saya\s+(.+?)(?:\s|$)/i', // Fallback: first name after saya
         ];
 
         foreach ($patterns as $pattern) {

@@ -2,43 +2,38 @@
 
 namespace App\Services;
 
-use App\Models\Conversation;
 use App\Models\Customer;
 use App\Models\OrderDraft;
-use Carbon\Carbon;
+use App\Models\Order;
+use App\Models\OrderItem;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class OrderDraftService
 {
     protected ParameterValidationService $validationService;
 
+    /**
+     * Constructor dengan Dependency Injection untuk Validation Service
+     */
     public function __construct(ParameterValidationService $validationService)
     {
         $this->validationService = $validationService;
     }
 
     /**
-     * Create or get existing order draft untuk customer
-     * IMPORTANT: Menggunakan eager loading untuk menghindari N+1 queries
-     * 
-     * @param Customer $customer
-     * @return OrderDraft
+     * Mengambil draft aktif atau membuat draft baru jika tidak ada.
      */
     public function getOrCreateDraft(Customer $customer): OrderDraft
     {
-        // Eager load dengan customer
-        $draft = OrderDraft::where('customer_id', $customer->id)
-            ->with(['customer']) // Eager load
-            ->where('expires_at', '>', now())
-            ->orWhereNull('expires_at')
-            ->latest()
-            ->first();
+        $draft = $this->getCustomerActiveDraft($customer);
 
-        if ($draft && $draft->isActive()) {
+        if ($draft) {
             return $draft;
         }
 
-        // Create new draft dengan expiry 24 jam
+        // Buat draft baru jika tidak ditemukan yang aktif
         return OrderDraft::create([
             'customer_id' => $customer->id,
             'data' => $this->getEmptyDraftData($customer),
@@ -48,61 +43,61 @@ class OrderDraftService
     }
 
     /**
-     * Update draft dengan extracted parameters
-     * 
-     * @param OrderDraft $draft
-     * @param array $extractedData
-     * @return array ['draft' => OrderDraft, 'validation' => array]
+     * Mencari draft aktif milik customer.
+     * Menggunakan query grouping agar 'orWhereNull' tidak mengambil data milik customer lain.
+     */
+    public function getCustomerActiveDraft(Customer $customer): ?OrderDraft
+    {
+        return OrderDraft::where('customer_id', $customer->id)
+            ->with(['customer']) // Eager loading untuk performa
+            ->where(function ($query) {
+                $query->where('expires_at', '>', now())
+                      ->orWhereNull('expires_at');
+            })
+            ->latest()
+            ->first();
+    }
+
+    /**
+     * Update data draft berdasarkan hasil ekstraksi AI/Input.
      */
     public function updateDraftWithExtraction(OrderDraft $draft, array $extractedData): array
     {
         $data = $draft->data ?? [];
 
-        // Update customer info
+        // Update Nama
         if (!empty($extractedData['customer_name'])) {
             $data['customer_name'] = $extractedData['customer_name'];
         }
 
-        // Update product info
+        // Update Produk
         if (!empty($extractedData['product_data'])) {
             $product = $extractedData['product_data'];
             $data['product_id'] = $product['product_id'];
             $data['product_name'] = $product['product_name'];
             $data['category'] = $product['category'];
             $data['price'] = $product['price'];
-            $data['product_similarity'] = $product['similarity']; // Track confidence
+            $data['product_similarity'] = $product['similarity'];
         }
 
-        // Update quantity
-        if (!empty($extractedData['quantity'])) {
-            $data['quantity'] = $extractedData['quantity'];
-        }
+        // Update Jumlah & Alamat
+        if (!empty($extractedData['quantity'])) $data['quantity'] = $extractedData['quantity'];
+        if (!empty($extractedData['address'])) $data['customer_address'] = $extractedData['address'];
 
-        // Update address
-        if (!empty($extractedData['address'])) {
-            $data['customer_address'] = $extractedData['address'];
-        }
-
-        // Calculate total price
+        // Kalkulasi Total Harga
         if (!empty($data['price']) && !empty($data['quantity'])) {
             $data['total_price'] = $data['price'] * $data['quantity'];
         }
 
-        // Determine next step
+        // Validasi kelengkapan data
         $validation = $this->validationService->validateOrderParameters($data);
         $nextStep = $validation['valid'] ? 'confirming' : $this->validationService->getNextStep($data);
 
-        // Update draft
+        // Simpan update ke database
         $draft->update([
             'data' => $data,
             'step' => $nextStep,
-            'expires_at' => now()->addHours(24), // Extend expiry
-        ]);
-
-        Log::debug('Draft updated', [
-            'draft_id' => $draft->id,
-            'step' => $nextStep,
-            'data' => $data,
+            'expires_at' => now()->addHours(24), // Extend masa berlaku tiap ada interaksi
         ]);
 
         return [
@@ -113,39 +108,35 @@ class OrderDraftService
     }
 
     /**
-     * Complete draft: convert to actual order
-     * IMPORTANT: Uses transaction & eager loading to prevent N+1
+     * Konversi draft menjadi Order asli (Checkout).
+     * Menggunakan Database Transaction untuk keamanan data.
      */
     public function completeDraft(OrderDraft $draft)
     {
-        // Validate dulu
+        // Pastikan data valid sebelum diconvert
         $validation = $this->validationService->validateOrderParameters($draft->data);
-
         if (!$validation['valid']) {
             throw new \Exception('Order tidak lengkap: ' . implode(', ', $validation['missing']));
         }
 
-        // Eager load relationships untuk menghindari N+1
-        $draft->load(['customer']);
-
         try {
-            $order = \DB::transaction(function () use ($draft) {
-                // Update customer data
+            return DB::transaction(function () use ($draft) {
+                // 1. Update data customer terbaru
                 $draft->customer->update([
                     'name' => $draft->data['customer_name'] ?? $draft->customer->name,
                     'address' => $draft->data['customer_address'] ?? $draft->customer->address,
                 ]);
 
-                // Create order
-                $order = \App\Models\Order::create([
-                    'customer_id' => $draft->customer->id,
+                // 2. Buat Order
+                $order = Order::create([
+                    'customer_id' => $draft->customer_id,
                     'total_price' => $draft->data['total_price'] ?? 0,
                     'status' => 'pending',
                     'notes' => $draft->data['raw_message'] ?? null,
                 ]);
 
-                // Create order item
-                \App\Models\OrderItem::create([
+                // 3. Buat Item Order
+                OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $draft->data['product_id'],
                     'quantity' => $draft->data['quantity'],
@@ -153,40 +144,28 @@ class OrderDraftService
                     'subtotal' => $draft->data['total_price'],
                 ]);
 
-                // Mark draft as completed
+                // 4. Hapus draft karena sudah jadi order
                 $draft->delete();
 
                 return $order;
             });
-
-            Log::info('Draft completed as order', [
-                'draft_id' => $draft->id,
-                'order_id' => $order->id,
-                'customer_id' => $draft->customer->id,
-            ]);
-
-            return $order;
         } catch (\Exception $e) {
-            Log::error('Failed to complete draft', [
-                'draft_id' => $draft->id,
-                'error' => $e->getMessage(),
-            ]);
+            Log::error('Gagal menyelesaikan draft: ' . $e->getMessage());
             throw $e;
         }
     }
 
     /**
-     * Discard draft
+     * Hapus draft jika user membatalkan pesanan.
      */
     public function discardDraft(OrderDraft $draft): void
     {
         $draft->delete();
-
-        Log::info('Draft discarded', ['draft_id' => $draft->id]);
+        Log::info("Draft #{$draft->id} dibatalkan oleh user.");
     }
 
     /**
-     * Get draft summary untuk display ke user
+     * Mendapatkan ringkasan teks untuk dikirim ke user (WhatsApp).
      */
     public function getDraftSummary(OrderDraft $draft): string
     {
@@ -194,7 +173,7 @@ class OrderDraftService
     }
 
     /**
-     * Get empty draft template untuk customer baru
+     * Template data awal untuk draft baru.
      */
     private function getEmptyDraftData(Customer $customer): array
     {
@@ -210,36 +189,19 @@ class OrderDraftService
             'total_price' => null,
             'category' => null,
             'raw_message' => null,
-            'product_similarity' => null,
             'created_at' => now()->toIso8601String(),
         ];
     }
 
     /**
-     * Clean up expired drafts (bisa di-cron job)
+     * Membersihkan draft yang sudah expired (bisa dipanggil via Scheduler).
      */
     public function cleanupExpiredDrafts(): int
     {
         $deleted = OrderDraft::where('expires_at', '<', now())
-            ->where('expires_at', '!=', null)
+            ->whereNotNull('expires_at')
             ->delete();
 
-        Log::info('Expired drafts cleaned up', ['count' => $deleted]);
-
         return $deleted;
-    }
-
-    /**
-     * Get customer's active draft
-     * IMPORTANT: Eager loading untuk performance
-     */
-    public function getCustomerActiveDraft(Customer $customer): ?OrderDraft
-    {
-        return OrderDraft::where('customer_id', $customer->id)
-            ->with(['customer']) // Eager load
-            ->where('expires_at', '>', now())
-            ->orWhereNull('expires_at')
-            ->latest()
-            ->first();
     }
 }

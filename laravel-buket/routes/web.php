@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\FuzzyRuleController;
+use App\Http\Controllers\Admin\MasterStateController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
@@ -82,6 +83,9 @@ Route::middleware(['auth'])->group(function () {
             Route::get('chat', [ReportController::class, 'chat'])->name('reports.chat');
             Route::get('export-sales', [ReportController::class, 'exportSales'])->name('reports.export-sales');
         });
+
+         // Master States
+    Route::resource('master-states', MasterStateController::class);
 
         // Fuzzy Rules
         Route::resource('fuzzy-rules', FuzzyRuleController::class);

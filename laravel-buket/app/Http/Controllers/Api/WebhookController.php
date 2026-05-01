@@ -6,11 +6,12 @@ use App\Events\WhatsAppMessageReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Message;
+use App\Services\ChatbotService; // Pastikan Service ini ada
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class WebhookController extends Controller
-{
+class WebhookController extends Controller {
     /**
      * Receive incoming WhatsApp messages from wa-service
      */
@@ -102,13 +103,38 @@ class WebhookController extends Controller
                     'body' => $message->body,
                 ]);
 
-                WhatsAppMessageReceived::dispatch($message, $validated);
+                  // --- INTEGRASI CHATBOT LANGSUNG ---
+                $chatbot = app(ChatbotService::class);
+                $replies = $chatbot->processMessage($phoneNumber, $messageBody);
 
-                Log::channel('whatsapp')->info('Incoming message processed', [
+                $waService = app(WhatsAppService::class);
+
+                foreach ($replies as $text) {
+                    // Kirim pesan teks via WhatsApp Service
+                    $waService->sendText($phoneNumber, $text);
+
+                    // Simpan juga ke tabel messages sebagai pesan keluar (Sent)
+                    Message::create([
+                        'customer_id' => $customer->id,
+                        'message_id' => 'reply_'.time().'_'.uniqid(),
+                        'from' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
+                        'to' => $phoneNumber,
+                        'body' => $text,
+                        'type' => 'text',
+                        'status' => 'sent',
+                        'is_incoming' => false,
+                        'parsed' => true,
+                        'chat_status' => 'active',
+                    ]);
+                }
+                // --- AKHIR INTEGRASI ---
+
+                Log::channel('whatsapp')->info('Incoming message processed directly', [
                     'db_id' => $message->id,
                     'wa_id' => $finalMessageId,
                     'from' => $phoneNumber,
                 ]);
+
 
               return response()->json([
                 'success' => true,
