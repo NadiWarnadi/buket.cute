@@ -379,19 +379,23 @@ class ChatbotService
     }
 
     // ===================== STATE 7: ORDER CREATED =====================
+    // ===================== STATE 7: ORDER CREATED =====================
     private function stateOrderCreated(Customer $customer, ?OrderDraft $draft, MasterState $state): array
     {
         $orderId = $draft->data['order_id'] ?? 'terbaru';
         $method = $draft->data['payment_method'] ?? 'cod';
         
         $reply = "Pesanan #{$orderId} berhasil dibuat! 🎉\n";
+
         if ($method === 'cod') {
             $reply .= "Pembayaran *COD* saat barang diterima ya.";
         } elseif ($method === 'transfer') {
             $reply .= "Silakan transfer ke rekening BCA 123456789 a.n. Buket Cute. Kirim bukti ke admin ya.";
         } elseif ($method === 'qris') {
-            $reply .= "Ini QRIS untuk pembayaran:\n[Gambar QRIS akan dikirim admin]";
+            // Fallback jika terpanggil untuk QRIS (karena utama sudah dihandle di completeDraftToOrder)
+            $reply .= "Instruksi pembayaran QRIS sudah dikirimkan di atas. Silakan selesaikan pembayaran Anda.";
         }
+
         $reply .= "\n\nKetik *cek status* untuk lacak pesanan.";
         
         return [$reply];
@@ -609,6 +613,7 @@ private function handleGlobalIntent(Customer $customer, MasterState $currentStat
             $notes .= ($notes ? "\n" : '') . "Kartu Ucapan: " . $data['card_message'];
         }
 
+        // 1. Buat Order
         $order = Order::create([
             'customer_id' => $customer->id,
             'total_price' => $total,
@@ -619,6 +624,7 @@ private function handleGlobalIntent(Customer $customer, MasterState $currentStat
             'payment_due_date' => now()->addDay(),
         ]);
 
+        // 2. Buat OrderItem
         OrderItem::create([
             'order_id' => $order->id,
             'product_id' => $data['product_id'] ?? null,
@@ -628,9 +634,29 @@ private function handleGlobalIntent(Customer $customer, MasterState $currentStat
             'subtotal' => $total,
         ]);
 
+        // 3. Logika Khusus QRIS
+        if (($data['payment_method'] ?? '') === 'qris') {
+            // Panggil MidtransService untuk generate QRIS
+            app(\App\Services\MidtransService::class)->createQrisTransaction($order);
+
+            // Ambil URL gambar QR dari kolom midtrans_qr_code_url (asumsi kolom sudah ada)
+            $qrUrl = $order->fresh()->midtrans_qr_code_url;
+            $caption = "Silakan scan kode QR di atas untuk pembayaran pesanan #{$order->id} Anda sebesar *Rp " . number_format($total, 0, ',', '.') . "*.\n\nKetik *cek status* untuk melihat status pesanan.";
+
+            // Kirim via WhatsAppService
+            $this->wa->sendImageFromUrl($customer->phone, $qrUrl, $caption);
+
+            // Update state ke 7 (Order Created)
+            $draft->update(['step' => 'completed', 'data' => array_merge($data, ['order_id' => $order->id])]);
+            $customer->update(['current_state_id' => 7]);
+
+            // Langsung return array (bypass stateOrderCreated)
+            return ["Pesanan #{$order->id} berhasil dibuat! QRIS sedang dikirim ke chat ini. Segera lakukan pembayaran ya!"];
+        }
+
+        // 4. Logika COD/Transfer (Tetap seperti semula)
         $draft->update(['step' => 'completed', 'data' => array_merge($data, ['order_id' => $order->id])]);
         $customer->update(['current_state_id' => 7]);
 
         return $this->stateOrderCreated($customer, $draft, MasterState::find(7));
-    }
-}
+    }}

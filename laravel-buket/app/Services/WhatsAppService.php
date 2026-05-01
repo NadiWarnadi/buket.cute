@@ -129,6 +129,45 @@ class WhatsAppService
     }
 
     /**
+ * Kirim gambar dari URL ke WhatsApp.
+ * Unduh gambar dari URL, simpan sementara, lalu kirim sebagai media.
+ */
+public function sendImageFromUrl(string $phoneNumber, string $imageUrl, ?string $caption = null): array
+{
+    try {
+        // Unduh konten gambar
+        $imageContent = file_get_contents($imageUrl);
+        if ($imageContent === false) {
+            throw new \Exception("Gagal mengunduh gambar dari URL: $imageUrl");
+        }
+
+        // Simpan ke file sementara
+        $tempPath = tempnam(sys_get_temp_dir(), 'wa_qr_') . '.png';
+        file_put_contents($tempPath, $imageContent);
+
+        // Kirim sebagai media (type image)
+        $result = $this->sendMedia($phoneNumber, $tempPath, $caption, 'image');
+
+        // Hapus file sementara setelah dikirim
+        if (file_exists($tempPath)) {
+            unlink($tempPath);
+        }
+
+        return $result;
+    } catch (\Exception $e) {
+        Log::channel('whatsapp')->error('Gagal mengirim gambar dari URL', [
+            'to' => $phoneNumber,
+            'url' => $imageUrl,
+            'error' => $e->getMessage(),
+        ]);
+        return [
+            'success' => false,
+            'error' => $e->getMessage(),
+        ];
+    }
+}
+
+    /**
      * Kirim media ke WhatsApp
      */
     public function sendMedia(string $phoneNumber, string $filePath, $caption = null, $mediaType = null): array
