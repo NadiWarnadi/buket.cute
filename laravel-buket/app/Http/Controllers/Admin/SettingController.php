@@ -3,143 +3,166 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
 
 class SettingController extends Controller
 {
     /**
-     * Settings file path
-     */
-    private const SETTINGS_FILE = 'app_settings.json';
-
-    /**
-     * Get all settings
-     */
-    private function getSettings()
-    {
-        $path = storage_path(self::SETTINGS_FILE);
-
-        if (File::exists($path)) {
-            return json_decode(File::get($path), true) ?? $this->getDefaultSettings();
-        }
-
-        return $this->getDefaultSettings();
-    }
-
-    /**
-     * Get default settings
-     */
-    private function getDefaultSettings()
-    {
-        return [
-            'app_name' => 'Toko Bucket Cutie',
-            'app_description' => 'Sistem Informasi Pemesanan',
-            'app_timezone' => 'Asia/Jakarta',
-            'app_currency' => 'IDR',
-            'whatsapp_enabled' => false,
-            'whatsapp_phone' => '',
-            'whatsapp_api_url' => '',
-            'whatsapp_api_key' => '',
-            'notification_email' => '',
-            'notification_enabled' => false,
-            'order_prefix' => 'ORD',
-            'low_stock_threshold' => 5,
-            'auto_order_timeout' => 24, // jam
-        ];
-    }
-
-    /**
-     * Save settings to file
-     */
-    private function saveSettings($settings)
-    {
-        $path = storage_path(self::SETTINGS_FILE);
-        File::put($path, json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    }
-
-    /**
-     * Display settings page
+     * Tampilkan halaman pengaturan utama
      */
     public function index()
     {
-        $settings = $this->getSettings();
+        $settings = [
+            'general'     => Setting::getByCategory('general'),
+            'stock'       => Setting::getByCategory('stock'),
+            'notification' => Setting::getByCategory('notification'),
+            'whatsapp'    => Setting::getByCategory('whatsapp'),
+        ];
 
         return view('admin.settings.index', compact('settings'));
     }
 
     /**
-     * Update settings
+     * Update pengaturan dari form
      */
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'app_name' => 'required|string|max:255',
-            'app_description' => 'nullable|string|max:1000',
-            'app_timezone' => 'required|string',
-            'app_currency' => 'required|string|max:10',
-            'notification_email' => 'nullable|email',
-            'notification_enabled' => 'boolean',
-            'order_prefix' => 'required|string|max:10',
+            // General
+            'app_name'          => 'required|string|max:255',
+            'app_description'   => 'nullable|string',
+            'app_timezone'      => 'required|string',
+            'app_currency'      => 'required|string|max:10',
+            'order_prefix'      => 'required|string|max:10',
+            // Stock
             'low_stock_threshold' => 'required|integer|min:1',
-            'auto_order_timeout' => 'required|integer|min:1',
-            'whatsapp_enabled' => 'boolean',
-            'whatsapp_phone' => 'nullable|string',
-            'whatsapp_api_url' => 'nullable|url',
-            'whatsapp_api_key' => 'nullable|string',
+            'auto_order_timeout'  => 'required|integer|min:1',
+            // Notification
+            'notification_email'  => 'nullable|email',
+            // WhatsApp
+            'whatsapp_phone'      => 'nullable|string',
+            'whatsapp_api_url'    => 'nullable|url',
+            'whatsapp_api_key'    => 'nullable|string', // kosong = tidak diubah
         ]);
 
-        // Handle checkbox yang tidak terkirim
-        if (! $request->has('notification_enabled')) {
-            $validated['notification_enabled'] = false;
-        }
-        if (! $request->has('whatsapp_enabled')) {
-            $validated['whatsapp_enabled'] = false;
-        }
+        // Boolean checkboxes
+        $validated['notification_enabled'] = $request->has('notification_enabled') ? '1' : '0';
+        $validated['whatsapp_enabled']     = $request->has('whatsapp_enabled') ? '1' : '0';
 
-        $this->saveSettings($validated);
+        // Simpan setiap key, kecuali whatsapp_api_key jika kosong
+        foreach ($validated as $key => $value) {
+            if ($key === 'whatsapp_api_key' && empty($value)) {
+                continue; // jangan update, biarkan nilai lama
+            }
+            Setting::setValue($key, (string) $value);
+        }
 
         return redirect()->route('admin.settings.index')
             ->with('success', 'Pengaturan berhasil disimpan.');
     }
 
     /**
-     * Check WhatsApp connection status
+     * Halaman khusus manajemen QR Code WhatsApp
      */
-    public function checkWhatsAppStatus()
+    public function whatsappQr()
     {
-        $settings = $this->getSettings();
+        return view('admin.settings.whatsapp-qr');
+    }
 
-        if (! $settings['whatsapp_enabled'] || ! $settings['whatsapp_api_url']) {
+    /**
+     * Cek status koneksi WhatsApp dari Node.js
+     * Endpoint: GET admin/settings/whatsapp-status (AJAX)
+     */
+    public function checkWhatsAppStatus(): JsonResponse
+    {
+        $apiUrl = Setting::getValue('whatsapp_api_url', 'http://localhost:3000');
+        $apiKey = Setting::getValue('whatsapp_api_key');
+
+        $connected = false;
+        $phone     = Setting::getValue('whatsapp_phone');
+
+        if (empty($apiKey)) {
             return response()->json([
-                'status' => 'disabled',
-                'message' => 'WhatsApp belum diaktifkan',
+                'connected' => false,
+                'status'    => 'disabled',
+                'phone'     => $phone,
+                'message'   => 'API Key WhatsApp belum dikonfigurasi'
             ]);
         }
 
-        // Di sini bisa ditambahkan logic untuk check ke WhatsApp API
-        // Untuk sekarang, akan return mock status
+        try {
+            $response = Http::withHeaders(['X-API-Key' => $apiKey])
+                ->timeout(5)
+                ->get($apiUrl . '/api/status');
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $connected = $data['status']['connected'] ?? false;
+                // Update status di database
+                Setting::setValue('wa_connection_status', $connected ? 'connected' : 'disconnected');
+                // Update nomor jika ada
+                if (!empty($data['status']['user'])) {
+                    Setting::setValue('whatsapp_phone', $data['status']['user']);
+                    $phone = $data['status']['user'];
+                }
+            } else {
+                // Node.js merespon error
+                $connected = false;
+            }
+        } catch (\Exception $e) {
+            // Node.js offline, gunakan status terakhir dari database
+            $connected = Setting::getValue('wa_connection_status') === 'connected';
+        }
 
         return response()->json([
-            'status' => 'connected',
-            'message' => 'WhatsApp API terhubung',
-            'phone' => $settings['whatsapp_phone'] ?? '-',
-            'last_checked' => now()->format('Y-m-d H:i:s'),
+            'connected' => $connected,
+            'status'    => $connected ? 'connected' : 'disconnected',
+            'phone'     => $phone,
         ]);
     }
 
     /**
-     * Rescan QR Code untuk WhatsApp
+     * Reset sesi WhatsApp di Node.js (menghasilkan QR baru)
+     * Endpoint: POST admin/settings/rescan-qr
      */
-    public function rescanQR()
+    public function rescanQR(): JsonResponse
     {
-        // Logic untuk trigger QR code rescan bisa ditambahkan di sini
-        // Ini akan memanggil WhatsApp API untuk generate QR code baru
+        $apiUrl = Setting::getValue('whatsapp_api_url');
+        $apiKey = Setting::getValue('whatsapp_api_key');
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'QR Code di-generate ulang',
-            'redirect' => route('admin.settings.index'),
-        ]);
+        if (empty($apiKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'API Key WhatsApp belum dikonfigurasi'
+            ], 400);
+        }
+
+        try {
+            $response = Http::withHeaders(['X-API-Key' => $apiKey])
+                ->timeout(5)
+                ->post($apiUrl . '/api/reset-session');
+
+            $data = $response->json();
+
+            // Hapus QR code yang lama dari database
+            Setting::setValue('wa_qr_code', null);
+            // Set status menjadi disconnected sementara
+            Setting::setValue('wa_connection_status', 'disconnected');
+
+            return response()->json([
+                'success' => true,
+                'message' => $data['message'] ?? 'Sesi WhatsApp direset, silakan scan QR code baru.'
+            ]);
+        } catch (\Exception $e) {
+            // Jika Node.js tidak merespon, tetap hapus QR dari database
+            Setting::setValue('wa_qr_code', null);
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghubungi server WhatsApp. Pastikan server Node.js berjalan.'
+            ], 500);
+        }
     }
 }

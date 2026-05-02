@@ -1,0 +1,15 @@
+{
+    "app_name": "Toko Bucket Cutieo",
+    "app_description": "Sistem Informasi Pemesanan",
+    "app_timezone": "Asia\/Jakarta",
+    "app_currency": "IDR",
+    "notification_email": null,
+    "order_prefix": "ORD",
+    "low_stock_threshold": "5",
+    "auto_order_timeout": "24",
+    "whatsapp_phone": null,
+    "whatsapp_api_url": null,
+    "whatsapp_api_key": null,
+    "notification_enabled": false,
+    "whatsapp_enabled": true
+}

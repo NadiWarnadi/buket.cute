@@ -13,7 +13,9 @@ class Customer extends Model
         'name',
         'phone',
         'address',
-        'current_state_id', 'last_activity_at',
+        'current_state_id',
+        'last_activity_at',
+        'is_admin_handled',
     ];
 
     // Relasi dengan Order
@@ -37,6 +39,14 @@ class Customer extends Model
     public function orderDrafts(): HasMany
     {
         return $this->hasMany(OrderDraft::class);
+    }
+
+    // Toggle delegasi chat ke admin
+    public function toggleDelegation()
+    {
+        $this->is_admin_handled = !$this->is_admin_handled;
+        $this->save();
+        return $this;
     }
 
     /**

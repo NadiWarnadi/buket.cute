@@ -19,7 +19,7 @@ try {
 // --- 2. SETTING API ---
 $webhookKey = 'your-super-secret-api-key-change-me-in-production'; 
 $laravelWebhookUrl = 'http://localhost:8000/api/whatsapp/webhook';
-$phoneTester = "628878336711";
+$phoneTester = "6288783334711";
 
 echo "--- WA Chat Simulator (Authorized + DB Reader) ---\n";
 echo "Ketik pesan untuk bot. Ketik 'exit' untuk keluar.\n\n";

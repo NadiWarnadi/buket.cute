@@ -20,46 +20,67 @@ class MidtransService
     /**
      * Buat transaksi QRIS (via CoreApi) untuk order.
      */
-    public function createQrisTransaction(Order $order): array
-    {
-        $customer = $order->customer;
+   public function createQrisTransaction(Order $order): array
+{
+    $customer = $order->customer;
 
-        $transaction = [
-            'payment_type' => 'gopay', // gopay / qris
-            'transaction_details' => [
-                'order_id' => 'ORDER-' . $order->id . '-' . time(),
-                'gross_amount' => (int) $order->total_price,
-            ],
-            'customer_details' => [
-                'first_name' => $customer->name ?? 'Pelanggan',
-                'phone' => $customer->phone,
-                'address' => $customer->address,
-            ],
-            'gopay' => [
-                'enable_callback' => true,
-                'callback_url' => route('midtrans.webhook'),
-            ],
-        ];
+    $transaction = [
+        'payment_type' => 'gopay',
+        'transaction_details' => [
+            'order_id' => 'ORDER-' . $order->id . '-' . time(),
+            'gross_amount' => (int) $order->total_price,
+        ],
+        'customer_details' => [
+            'first_name' => $customer->name ?? 'Pelanggan',
+            'phone' => $customer->phone,
+            'address' => $customer->address,
+        ],
+        'gopay' => [
+            'enable_callback' => true,
+            'callback_url' => route('midtrans.webhook'),
+        ],
+    ];
 
-        try {
-            $response = CoreApi::charge($transaction);
-            Log::info('Midtrans charge response', $response);
+    try {
+        $responseObj = CoreApi::charge($transaction);
+        $response = json_decode(json_encode($responseObj), true);
+        Log::info('Midtrans response', ['response' => $response]);
 
-            $order->update([
-                'midtrans_order_id' => $response['order_id'],
-                'midtrans_transaction_status' => $response['transaction_status'],
-                'midtrans_transaction_id' => $response['transaction_id'],
-                'midtrans_payment_type' => $response['payment_type'],
-                'midtrans_qr_code_url' => $response['actions'][0]['url'] ?? null,
-                'midtrans_raw_response' => json_encode($response),
-            ]);
-
-            return $response;
-        } catch (\Exception $e) {
-            Log::error('Midtrans charge error: ' . $e->getMessage());
-            throw $e;
+        // Ambil URL QR code (generate-qr-code)
+        $qrUrl = null;
+        if (isset($response['actions'])) {
+            foreach ($response['actions'] as $action) {
+                if (strpos($action['name'], 'generate-qr-code') !== false) {
+                    $qrUrl = $action['url'];
+                    break;
+                }
+            }
         }
+
+        if (!$qrUrl) {
+            throw new \Exception('QR code URL tidak ditemukan di respons Midtrans.');
+        }
+
+        $order->update([
+            'midtrans_order_id' => $response['order_id'],
+            'midtrans_transaction_status' => $response['transaction_status'],
+            'midtrans_transaction_id' => $response['transaction_id'],
+            'midtrans_payment_type' => $response['payment_type'],
+            'midtrans_qr_code_url' => $qrUrl,
+            'midtrans_raw_response' => json_encode($response),
+        ]);
+
+        return [
+            'success' => true,
+            'qr_url' => $qrUrl,
+            'order_id' => $response['order_id'],
+             'expiry_time' => $response['expiry_time'] ?? null,
+        ];
+    } catch (\Exception $e) {
+        Log::error('Midtrans charge error: ' . $e->getMessage());
+        throw $e;
     }
+}
 
     /**
      * Handle webhook notifikasi dari Midtrans.
@@ -84,7 +105,6 @@ class MidtransService
                 'payment_status' => 'paid',
                 'status' => 'processed',
             ]);
-            // kirim notifikasi sukses via WhatsApp
             app(WhatsAppService::class)->sendText(
                 $order->customer->phone,
                 "✅ Pembayaran pesanan #{$order->id} berhasil! Pesanan akan segera diproses."

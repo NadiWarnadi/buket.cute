@@ -27,6 +27,6 @@ class AppServiceProvider extends ServiceProvider
         Config::set('midtrans.is_production', config('midtrans.is_production'));
         Config::set('midtrans.is_sanitized', config('midtrans.is_sanitized'));
         Config::set('midtrans.is_3ds', config('midtrans.is_3ds'));
-        Config::set('midtrans.webhook_url', route('midtrans.webhook'));
+        // Config::set('midtrans.webhook_url', route('midtrans.webhook'));
     }
 }

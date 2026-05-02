@@ -75,6 +75,12 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('chat/{customer}/status', [ChatController::class, 'updateStatus'])->name('chat.updateStatus');
         Route::patch('messages/{message}/read', [ChatController::class, 'markMessageAsRead'])->name('messages.mark-read');
         Route::get('chat/stats', [ChatController::class, 'getStats'])->name('chat.stats');
+        Route::post('chat/{customer}/toggle-delegation', [ChatController::class, 'toggleDelegation'])
+            ->name('chat.toggle-delegation');
+        Route::post('chat/{customer}/escalate', [ChatController::class, 'escalateToAdmin'])
+            ->name('chat.escalate');
+        Route::post('chat/{customer}/resume', [ChatController::class, 'resumeFromAdmin'])
+            ->name('chat.resume');
 
         // Reports
         Route::prefix('reports')->group(function () {
@@ -100,6 +106,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [SettingController::class, 'index'])->name('settings.index');
             Route::put('/', [SettingController::class, 'update'])->name('settings.update');
             Route::get('whatsapp-status', [SettingController::class, 'checkWhatsAppStatus'])->name('settings.whatsapp-status');
+            Route::get('whatsapp-qr', [SettingController::class, 'whatsappQr'])->name('settings.whatsapp-qr');
             Route::post('rescan-qr', [SettingController::class, 'rescanQR'])->name('settings.rescan-qr');
         });
     });

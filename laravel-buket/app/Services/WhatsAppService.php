@@ -132,23 +132,29 @@ class WhatsAppService
  * Kirim gambar dari URL ke WhatsApp.
  * Unduh gambar dari URL, simpan sementara, lalu kirim sebagai media.
  */
-public function sendImageFromUrl(string $phoneNumber, string $imageUrl, ?string $caption = null): array
+public function sendImageFromUrl(string $phoneNumber, ?string $imageUrl, ?string $caption = null): array
 {
+    if (empty($imageUrl)) {
+        Log::channel('whatsapp')->error('sendImageFromUrl called with empty URL', [
+            'to' => $phoneNumber,
+        ]);
+        return [
+            'success' => false,
+            'error' => 'URL gambar kosong.',
+        ];
+    }
+
     try {
-        // Unduh konten gambar
         $imageContent = file_get_contents($imageUrl);
         if ($imageContent === false) {
             throw new \Exception("Gagal mengunduh gambar dari URL: $imageUrl");
         }
 
-        // Simpan ke file sementara
         $tempPath = tempnam(sys_get_temp_dir(), 'wa_qr_') . '.png';
         file_put_contents($tempPath, $imageContent);
 
-        // Kirim sebagai media (type image)
         $result = $this->sendMedia($phoneNumber, $tempPath, $caption, 'image');
 
-        // Hapus file sementara setelah dikirim
         if (file_exists($tempPath)) {
             unlink($tempPath);
         }

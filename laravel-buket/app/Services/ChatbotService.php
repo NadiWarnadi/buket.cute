@@ -304,32 +304,42 @@ class ChatbotService
     }
 
     // ===================== STATE 5: PEMBAYARAN =====================
-    private function stateCollectPayment(Customer $customer, ?OrderDraft $draft, MasterState $state, string $message): array
-    {
-        $lower = strtolower(trim($message));
-        $methods = ['cod', 'transfer', 'qris'];
-        $method = null;
+   private function stateCollectPayment(Customer $customer, ?OrderDraft $draft, MasterState $state, string $message): array
+{
+    $lower = strtolower(trim($message));
+    $method = null;
 
-        if (in_array($lower, $methods)) {
-            $method = $lower;
-        } elseif ($lower === '1' || $lower === 'cod') $method = 'cod';
-        elseif ($lower === '2' || $lower === 'transfer') $method = 'transfer';
-        elseif ($lower === '3' || $lower === 'qris') $method = 'qris';
-
-        if (!$method) {
-            return ["Maaf, pilih salah satu: *COD*, *Transfer*, atau *QRIS*."];
-        }
-
-        if ($draft) {
-            $data = $draft->data ?? [];
-            $data['payment_method'] = $method;
-            $draft->update(['data' => $data, 'step' => 'collect_payment']);
-        }
-
-        // Semua data lengkap, ke konfirmasi
-        $customer->update(['current_state_id' => 6]);
-        return $this->stateConfirmOrder($customer, $draft, MasterState::find(6), '');
+    // Prioritas: cari angka 1-3 di string
+    if (preg_match('/\b([1-3])\b/', $lower, $matches)) {
+        $method = match ($matches[1]) {
+            '1' => 'cod',
+            '2' => 'transfer',
+            '3' => 'qris',
+            default => null
+        };
+    } 
+    // Jika tidak ada angka, cocokkan kata kunci
+    elseif (str_contains($lower, 'cod')) {
+        $method = 'cod';
+    } elseif (str_contains($lower, 'transfer')) {
+        $method = 'transfer';
+    } elseif (str_contains($lower, 'qris')) {
+        $method = 'qris';
     }
+
+    if (!$method) {
+        return ["Maaf, pilih salah satu:\n1️⃣ *COD*\n2️⃣ *Transfer*\n3️⃣ *QRIS*"];
+    }
+
+    if ($draft) {
+        $data = $draft->data ?? [];
+        $data['payment_method'] = $method;
+        $draft->update(['data' => $data, 'step' => 'collect_payment']);
+    }
+
+    $customer->update(['current_state_id' => 6]);
+    return $this->stateConfirmOrder($customer, $draft, MasterState::find(6), '');
+}
 
     // ===================== STATE 10: KARTU UCAPAN =====================
     private function stateCollectCardMessage(Customer $customer, ?OrderDraft $draft, MasterState $state, string $message): array
@@ -636,22 +646,54 @@ private function handleGlobalIntent(Customer $customer, MasterState $currentStat
 
         // 3. Logika Khusus QRIS
         if (($data['payment_method'] ?? '') === 'qris') {
-            // Panggil MidtransService untuk generate QRIS
-            app(\App\Services\MidtransService::class)->createQrisTransaction($order);
+            try {
+                $midtransService = app(\App\Services\MidtransService::class);
+                $result = $midtransService->createQrisTransaction($order);
+                
+                // Ambil URL dari response Midtrans
+                $qrUrl = $result['qr_url'] ?? null;
+                $expiry = $result['expiry_time'] ;
+                if (empty($qrUrl)) {
+                    throw new \Exception('Midtrans tidak mengembalikan QR URL');
+                }
 
-            // Ambil URL gambar QR dari kolom midtrans_qr_code_url (asumsi kolom sudah ada)
-            $qrUrl = $order->fresh()->midtrans_qr_code_url;
-            $caption = "Silakan scan kode QR di atas untuk pembayaran pesanan #{$order->id} Anda sebesar *Rp " . number_format($total, 0, ',', '.') . "*.\n\nKetik *cek status* untuk melihat status pesanan.";
+                $caption = "QR Code untuk pembayaran pesanan #{$order->id}\n"
+                         . "Total: Rp " . number_format($total, 0, ',', '.') . "\n"
+                         . "Silakan scan untuk menyelesaikan pembayaran.\n"
+                         . $qrUrl . "\n\n"
+                          . "⏰ Berlaku hingga: {$expiry}\n"
+         . "Copy URL ini lalu gunakan di simulator Midtrans: https://simulator.sandbox.midtrans.com/qris/index";
 
-            // Kirim via WhatsAppService
-            $this->wa->sendImageFromUrl($customer->phone, $qrUrl, $caption);
+                // Kirim gambar QR ke WhatsApp
+                $sendResult = $this->wa->sendImageFromUrl($customer->phone, $qrUrl, $caption);
 
-            // Update state ke 7 (Order Created)
-            $draft->update(['step' => 'completed', 'data' => array_merge($data, ['order_id' => $order->id])]);
-            $customer->update(['current_state_id' => 7]);
+                if (!$sendResult['success']) {
+                    Log::warning('Gagal mengirim QR ke WhatsApp', [
+                        'order_id' => $order->id,
+                        'error' => $sendResult['error'] ?? 'Tidak diketahui',
+                    ]);
+                }
 
-            // Langsung return array (bypass stateOrderCreated)
-            return ["Pesanan #{$order->id} berhasil dibuat! QRIS sedang dikirim ke chat ini. Segera lakukan pembayaran ya!"];
+                $draft->update([
+                    'step' => 'completed',
+                    'data' => array_merge($data, ['order_id' => $order->id])
+                ]);
+                $customer->update(['current_state_id' => 7]);
+
+                return [
+                    "Pesanan #{$order->id} berhasil! 🎉\n"
+                    . "Metode: *QRIS*\n"
+                    . "Saya sudah mengirimkan gambar QR code, silakan scan untuk membayar.\n\n"
+                    . "Setelah pembayaran sukses, pesanan akan otomatis diproses.\n"
+                    . "Ketik *cek status* untuk lacak pesanan."
+                ];
+            } catch (\Exception $e) {
+                Log::error('Gagal membuat transaksi Midtrans', [
+                    'order_id' => $order->id,
+                    'message' => $e->getMessage(),
+                ]);
+                return ["Maaf, terjadi kesalahan saat membuat QR code. Silakan coba lagi nanti atau pilih metode pembayaran lain."];
+            }
         }
 
         // 4. Logika COD/Transfer (Tetap seperti semula)

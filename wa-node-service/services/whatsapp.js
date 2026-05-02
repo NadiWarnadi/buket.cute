@@ -31,7 +31,8 @@ class WhatsAppService {
         this.sock = null;
         this.onMessageCallback = null;
         this.logger = pino({ level: 'info' });
-        this.antiDetection = new AntiDetectionService(); // <-- inisialisasi anti-detection
+        this.antiDetection = new AntiDetectionService(); // <-- anti-detection import
+        this.currentQR = null; // <-- store QR code untuk admin panel
     }
 
     async init() {
@@ -61,6 +62,8 @@ class WhatsAppService {
 
             if (qr) {
                 console.log('\n[QR] Scan kode di bawah untuk login:');
+                console.log('[QR] QR Code juga tersedia di endpoint: GET /api/qr-code');
+                this.currentQR = qr; // <-- simpan QR code untuk admin panel
                 qrcode.generate(qr, { small: true });
             }
 
@@ -292,6 +295,14 @@ class WhatsAppService {
             user: this.sock.user ? this.sock.user.id.split(':')[0] : null,
             message: isConnected ? 'WhatsApp Connected' : 'WhatsApp Disconnected'
         };
+    }
+
+    /**
+     * Dapatkan QR Code saat ini untuk admin scan
+     * @returns {string|null} QR code string atau null jika tidak ada
+     */
+    getQRCode() {
+        return this.currentQR;
     }
 
     /**
