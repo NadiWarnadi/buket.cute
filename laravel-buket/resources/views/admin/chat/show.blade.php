@@ -501,8 +501,8 @@ function resumeFromAdmin() {
     document.body.appendChild(form);
     form.submit();
 }
-    });
-}
+
+
 
 // Setup escalate dan resume button handlers
 document.addEventListener('DOMContentLoaded', function() {

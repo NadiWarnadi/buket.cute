@@ -57,22 +57,24 @@ class WhatsAppService {
 
         this.sock.ev.on('creds.update', saveCreds);
 
-        this.sock.ev.on('connection.update', (update) => {
+        this.sock.ev.on('connection.update', async (update) => { // <-- Tambahkan async di sini
             const { connection, lastDisconnect, qr } = update;
 
             if (qr) {
                 console.log('\n[QR] Scan kode di bawah untuk login:');
-                console.log('[QR] QR Code juga tersedia di endpoint: GET /api/qr-code');
-                this.currentQR = qr; // <-- simpan QR code untuk admin panel
+                this.currentQR = qr; 
                 qrcode.generate(qr, { small: true });
             }
 
             if (connection === 'close') {
+                await this.reportStatusToLaravel(); 
+
                 const shouldReconnect = (lastDisconnect.error instanceof Boom)
                     ? lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut
                     : true;
 
                 console.log('[Warn] Koneksi terputus:', lastDisconnect.error?.message);
+
                 if (shouldReconnect) {
                     console.log('[Retry] Mencoba menyambung ulang...');
                     this.init();
@@ -84,6 +86,8 @@ class WhatsAppService {
                 console.log('✅ WHATSAPP CONNECTED');
                 console.log(`📱 User: ${this.sock.user.id.split(':')[0]}`);
                 console.log('=============================================\n');
+                this.currentQR = null;
+                await this.reportStatusToLaravel();
             }
         });
 
@@ -277,24 +281,43 @@ class WhatsAppService {
         }
     }
 
-    getConnectionStatus() {
-        if (!this.sock) {
-            return {
-                connected: false,
-                status: 'disconnected',
-                message: 'WhatsApp not initialized'
-            };
-        }
+    // ... kode constructor dll ...
 
-        const connectionState = this.sock.connectionState || {};
-        const isConnected = connectionState.connection === 'open';
+    getConnectionStatus() {
+        // Cek secara mendalam: apakah socket ada dan user sudah ter-auth
+        const isConnected = !!(this.sock && this.sock.user);
 
         return {
             connected: isConnected,
-            status: connectionState.connection || 'unknown',
-            user: this.sock.user ? this.sock.user.id.split(':')[0] : null,
+            status: isConnected ? 'open' : (this.currentQR ? 'connecting' : 'disconnected'),
+            user: isConnected ? this.sock.user.id.split(':')[0] : null,
             message: isConnected ? 'WhatsApp Connected' : 'WhatsApp Disconnected'
         };
+    }
+
+    async reportStatusToLaravel() {
+        try {
+            // Ambil status terbaru dari method di atas
+            const status = this.getConnectionStatus();
+            const webhookUrl = process.env.LARAVEL_WEBHOOK_URL;
+
+            if (!webhookUrl) {
+                console.warn('[Webhook] LARAVEL_WEBHOOK_URL tidak ditemukan di .env');
+                return;
+            }
+
+            // Kirim ke Laravel
+            await axios.post(`${new URL(webhookUrl).origin}/api/whatsapp/update-status`, status, {
+                headers: { 
+                    'x-api-key': process.env.API_KEY,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 5000
+            });
+            console.log('[Webhook] Status berhasil dikirim ke Laravel');
+        } catch (err) {
+            console.error('[Webhook] Gagal mengirim status ke Laravel:', err.message);
+        }
     }
 
     /**

@@ -20,7 +20,7 @@ class DashboardController extends Controller
         $totalCategories = Category::count();
         $totalCustomers = Customer::count();
         $totalOrders = Order::count();
-
+        $waStatus = \App\Models\Setting::where('key', 'wa_connection_status')->first()->value ?? 'disconnected';
         // Count low stock products
         $lowStockProducts = Product::where('stock', '<=', 5)
             ->where('is_active', true)
@@ -34,8 +34,8 @@ class DashboardController extends Controller
         $activeFuzzyRules = FuzzyRule::where('is_active', true)->count();
 
         // Get recent orders
-        $recentOrders = Order::latest()->limit(5)->get();
-
+        $recentOrders = Order::latest()->limit(5)->get();  
+              
         return view('dashboard', compact(
             'totalOrders',
             'totalProducts',
@@ -45,7 +45,8 @@ class DashboardController extends Controller
             'activeProducts',
             'totalFuzzyRules',
             'activeFuzzyRules',
-            'recentOrders'
+            'recentOrders',
+            'waStatus'
         ));
     }
 }

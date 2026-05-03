@@ -225,9 +225,13 @@
                     <p class="mb-2">
                         <strong>Tanggal:</strong> {{ now()->format('d F Y') }}
                     </p>
-                    <p class="mb-0">
-                        <strong>Status WhatsApp:</strong> <span class="badge bg-secondary">Offline</span>
-                    </p>
+                    <div>
+    @if($waStatus == 'connected')
+        <span class="badge bg-success"><i class="bi bi-patch-check-fill"></i> WhatsApp Online</span>
+    @else
+        <span class="badge bg-danger"><i class="bi bi-patch-exclamation-fill"></i> WhatsApp Offline</span>
+    @endif
+</div>
                 </div>
             </div>
         </div>
