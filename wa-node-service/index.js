@@ -46,11 +46,15 @@ wa.init();
 
 // Cek Status Koneksi
 app.get('/api/status', authMiddleware, (req, res) => {
-    const queueStats = getQueueStats();
+    const connectionStatus = wa.getConnectionStatus(); // panggil method dari instance wa
     res.json({
-        ...status,
-        status: wa.getConnectionStatus(),
-        session: process.env.SESSION_NAME
+        success: true,
+        status: {
+            connected: connectionStatus.connected,
+            status: connectionStatus.status,
+            user: connectionStatus.user,
+            message: connectionStatus.message
+        }
     });
 });
 
@@ -139,6 +143,43 @@ app.post('/api/send-media', authMiddleware, upload.single('file'), async (req, r
 //         res.status(500).json({ success: false, error: err.message });
 //     }
 
+
+// ============================================
+// QR CODE SCANNING (UNTUK ADMIN PANEL)
+// ============================================
+
+/**
+ * GET /api/qr-code
+ * Dapatkan QR Code untuk scanning WhatsApp dari admin panel
+ * Tidak perlu token untuk endpoint ini agar admin bisa scan tanpa perlu copy-paste token
+ */
+app.get('/api/qr-code', (req, res) => {
+    try {
+        const qrCode = wa.getQRCode();
+        
+        if (!qrCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'QR Code tidak tersedia. Pastikan WhatsApp service sedang running dan belum terkoneksi.',
+                status: wa.getConnectionStatus()
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'QR Code berhasil diambil',
+            qrCode: qrCode,
+            status: wa.getConnectionStatus(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        console.error('[QR Code Error]', err.message);
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
+});
 
 // Health Check (Tanpa Auth untuk Load Balancer/Monitor)
 app.get('/health', (req, res) => {

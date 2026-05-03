@@ -21,6 +21,15 @@
     </nav>
 </div>
 
+@php
+    // Nomor WhatsApp tujuan (083824665074) – format internasional
+    $waNumber = '083824665074';
+    $waNumberClean = preg_replace('/[^0-9]/', '', $waNumber);
+    if (substr($waNumberClean, 0, 1) === '0') {
+        $waNumberClean = '62' . substr($waNumberClean, 1);
+    }
+@endphp
+
 <div class="container py-4">
     <div class="row g-4">
         <!-- Product Image -->
@@ -136,6 +145,7 @@
             <!-- Action Buttons -->
             <div class="d-grid gap-2 mb-4">
                 @if($product->stock > 0)
+                    <!-- Tombol WhatsApp langsung (tanpa AJAX) -->
                     <button class="btn btn-primary-custom btn-lg" id="orderBtn">
                         💬 Pesan via WhatsApp
                     </button>
@@ -143,7 +153,7 @@
                         ✏️ Minta Custom
                     </a>
                 @else
-                    <a href="https://wa.me/{{ env('STORE_WHATSAPP', '6281234567890') }}?text=Halo%20saya%20ingin%20menanyakan%20tentang%20ketersediaan%20{{ urlencode($product->name) }}" 
+                    <a href="https://wa.me/{{ $waNumberClean }}?text={{ urlencode('Halo, saya ingin menanyakan ketersediaan produk: ' . $product->name) }}" 
                        target="_blank" class="btn btn-primary-custom btn-lg">
                         💬 Tanyakan Ketersediaan
                     </a>
@@ -291,6 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const productPrice = {{ $product->price }};
     const productName = "{{ $product->name }}";
     const maxStock = {{ $product->stock }};
+    const waNumber = "{{ $waNumberClean }}";
 
     const quantityInput = document.getElementById('quantity');
     const totalPriceEl = document.getElementById('totalPrice');
@@ -298,10 +309,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const increaseBtn = document.getElementById('increaseQty');
     const orderBtn = document.getElementById('orderBtn');
 
+    function formatRupiah(angka) {
+        return new Intl.NumberFormat('id-ID').format(angka);
+    }
+
     function updateTotalPrice() {
         const qty = parseInt(quantityInput.value);
         const total = productPrice * qty;
-        totalPriceEl.textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
+        totalPriceEl.textContent = 'Rp ' + formatRupiah(total);
     }
 
     decreaseBtn.addEventListener('click', () => {
@@ -320,33 +335,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    orderBtn.addEventListener('click', async () => {
-        const quantity = parseInt(quantityInput.value);
+    // Tombol WhatsApp langsung tanpa AJAX
+    orderBtn.addEventListener('click', () => {
+        const qty = parseInt(quantityInput.value);
+        const total = productPrice * qty;
+        
+        // Format pesan
+        const message = `Halo, saya ingin memesan:
+*Produk:* ${productName}
+*Jumlah:* ${qty}
+*Harga satuan:* Rp ${formatRupiah(productPrice)}
+*Total:* Rp ${formatRupiah(total)}
 
-        try {
-            const response = await fetch('{{ route("public.orderToWhatsApp") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                },
-                body: JSON.stringify({
-                    product_id: productId,
-                    quantity: quantity
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.whatsapp_url) {
-                window.open(data.whatsapp_url, '_blank');
-            } else {
-                alert('Gagal membuat pesan. Silakan coba lagi.');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Terjadi kesalahan. Silakan coba lagi.');
-        }
+Apakah masih tersedia?`;
+        
+        const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
     });
 });
 </script>
