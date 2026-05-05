@@ -327,7 +327,23 @@ class WhatsAppService {
     getQRCode() {
         return this.currentQR;
     }
+    async sendImageFromUrl(to, imageUrl, caption = '') {
+    // Unduh gambar ke buffer
+    const axios = require('axios');
+    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data);
 
+    // Gunakan method sendMedia langsung (asumsikan sudah bisa terima buffer, 
+    // jika tidak, tulis ke file temp dulu seperti yang biasa dilakukan)
+    const { MessageType } = require('@whiskeysockets/baileys');
+    
+    // Kirim sebagai gambar
+    return await this.sock.sendMessage(to, {
+        image: buffer,
+        caption: caption,
+        mimetype: 'image/png'
+    });
+}
     /**
      * Kirim batch/broadcast message dengan anti-detection
      * Mencegah WhatsApp mendeteksi mass sending

@@ -242,6 +242,25 @@ app.get('/api/broadcast-stats', authMiddleware, (req, res) => {
     }
 });
 
+// Kirim gambar langsung dari URL (untuk QRIS, dll)
+app.post('/api/send-image-url', authMiddleware, async (req, res) => {
+    const { to, imageUrl, caption } = req.body;
+
+    if (!to || !imageUrl) {
+        return res.status(400).json({ error: 'Parameter to dan imageUrl wajib ada' });
+    }
+
+    try {
+        console.log(`[Send Image URL] Mengirim gambar ke ${to} dari ${imageUrl}`);
+
+        const result = await wa.sendImageFromUrl(to, imageUrl, caption || '');
+        
+        res.json({ success: true, message: 'Gambar terkirim', data: result });
+    } catch (err) {
+        console.error('[Send Image URL Error]', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 // Error Handling
 app.use((err, req, res, next) => {
     console.error('[System Error]', err.stack);
