@@ -12,7 +12,7 @@ class WhatsAppService
 
     private string $apiKey;
 
-    private string $timeout = '30';
+    private string $timeout = '90';
 
     public function __construct()
     {
@@ -141,6 +141,10 @@ class WhatsAppService
 
             if (empty($filePath) || ! file_exists($filePath)) {
                 throw new Exception('File not found: '.$filePath);
+            }
+            // 2. Cek apakah file bisa dibaca (Saran Anda)
+            if (!is_readable($filePath)) {
+                throw new Exception('File exists but is not readable: ' . $filePath);
             }
 
             $to = $this->formatPhoneNumber($phoneNumber);

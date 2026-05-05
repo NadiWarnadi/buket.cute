@@ -98,8 +98,10 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('settings')->group(function () {
             Route::get('/', [SettingController::class, 'index'])->name('settings.index');
             Route::put('/', [SettingController::class, 'update'])->name('settings.update');
-            Route::get('whatsapp-status', [SettingController::class, 'checkWhatsAppStatus'])->name('settings.whatsapp-status');
-            Route::post('rescan-qr', [SettingController::class, 'rescanQR'])->name('settings.rescan-qr');
+            Route::get('whatsapp', [SettingController::class, 'editWhatsApp'])->name('settings.whatsapp');
+    Route::put('/whatsapp', [SettingController::class, 'updateWhatsApp'])->name('settings.whatsapp.update');
+    Route::get('/whatsapp/qr', [SettingController::class, 'getQrCode'])->name('settings.whatsapp.qr');
+    Route::get('/whatsapp/status', [SettingController::class, 'getStatus'])->name('settings.whatsapp.status');
         });
     });
 });

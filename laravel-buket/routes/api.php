@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MediaUploadController;
+use App\Http\Controllers\Api\WhatsappStatusController;
 
 Route::prefix('whatsapp')->group(function () {
     // Webhook untuk menerima pesan dari wa-service (incoming messages)
@@ -30,6 +31,9 @@ Route::prefix('whatsapp')->group(function () {
 
     // Get active conversation dari customer
     Route::get('/customers/{id}/conversation', [WhatsAppController::class, 'getCustomerConversation'])->name('whatsapp.customer-conversation');
+    // Update status koneksi WhatsApp (misal dari wa-service)
+    Route::post('/whatsapp/update-status', [WhatsappStatusController::class, 'update'])
+    ->middleware('api.key'); 
 });
 
 // Fuzzy Bot Routes
