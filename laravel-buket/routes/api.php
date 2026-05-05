@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MediaUploadController;
 use App\Http\Controllers\Api\WhatsappStatusController;
+use App\Http\Controllers\Api\MidtransWebhookController;
 
 Route::prefix('whatsapp')->group(function () {
     // Webhook untuk menerima pesan dari wa-service (incoming messages)
@@ -35,6 +36,8 @@ Route::prefix('whatsapp')->group(function () {
     Route::post('/whatsapp/update-status', [WhatsappStatusController::class, 'update'])
     ->middleware('api.key'); 
 });
+
+Route::post('/midtrans/notification', [MidtransWebhookController::class, 'handleNotification'])->name('midtrans.webhook');
 
 // Fuzzy Bot Routes
 Route::prefix('fuzzy-rules')->group(function () {

@@ -9,10 +9,12 @@ class ConversationManager
     // State constants (gunakan string yang sama dengan yang sudah ada di sistem lama)
     public const STATE_IDLE = null; // null berarti tidak ada konteks aktif
     public const STATE_ORDERING_NAME = 'collecting_name';
+    public const STATE_ORDERING_ADDRESS = 'collecting_address';
     public const STATE_ORDERING_PRODUCT = 'collecting_product';
     public const STATE_ORDERING_QUANTITY = 'collecting_quantity';
-    public const STATE_ORDERING_ADDRESS = 'collecting_address';
+    
     public const STATE_ORDERING_PAYMENT = 'selecting_payment';
+    public const STATE_PAYMENT_INSTRUCTION = 'payment_instruction';
     public const STATE_ORDERING_CONFIRMING = 'confirming';
     public const STATE_COMPLAINT_CONFIRMING = 'complaint_confirming';
 

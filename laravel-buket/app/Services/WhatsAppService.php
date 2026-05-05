@@ -256,4 +256,57 @@ class WhatsAppService
 
         return 'document';
     }
+/**
+ * Kirim gambar ke WhatsApp dari URL.
+ * Unduh dulu ke file temporary, lalu kirim via sendMedia.
+ */
+public function sendImageFromUrl(string $phoneNumber, string $imageUrl, string $caption = ''): array
+{
+    try {
+        $to = $this->formatPhoneNumber($phoneNumber);
+
+        $payload = [
+            'to'       => $to,
+            'imageUrl' => $imageUrl,
+            'caption'  => $caption,
+        ];
+
+        $response = Http::withHeaders([
+            'x-api-key' => $this->apiKey,
+            'Content-Type' => 'application/json',
+        ])->timeout($this->timeout)
+          ->post("{$this->baseUrl}/api/send-image-url", $payload);
+
+        if ($response->successful()) {
+            Log::channel('whatsapp')->info('Image (URL) sent successfully', [
+                'to' => $phoneNumber,
+                'message_id' => $response->json('message_id'),
+            ]);
+            return [
+                'success'    => true,
+                'message_id' => $response->json('message_id'),
+                'timestamp'  => now(),
+            ];
+        }
+
+        $errorMsg = $response->json('error') ?? 'Unknown error';
+        Log::channel('whatsapp')->warning('Failed to send image via URL', [
+            'to' => $phoneNumber,
+            'error' => $errorMsg,
+        ]);
+        return [
+            'success' => false,
+            'error'   => $errorMsg,
+        ];
+    } catch (\Exception $e) {
+        Log::channel('whatsapp')->error('Exception sending image via URL', [
+            'to' => $phoneNumber,
+            'message' => $e->getMessage(),
+        ]);
+        return [
+            'success' => false,
+            'error'   => $e->getMessage(),
+        ];
+    }
+}
 }

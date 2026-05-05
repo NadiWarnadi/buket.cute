@@ -25,27 +25,27 @@ class OrderDraftService
      * @return OrderDraft
      */
     public function getOrCreateDraft(Customer $customer): OrderDraft
-    {
-        // Eager load dengan customer
-        $draft = OrderDraft::where('customer_id', $customer->id)
-            ->with(['customer']) // Eager load
-            ->where('expires_at', '>', now())
-            ->orWhereNull('expires_at')
-            ->latest()
-            ->first();
+{
+    $draft = OrderDraft::where('customer_id', $customer->id)
+        ->with(['customer'])
+        ->where(function ($query) {                 // <-- grouping condition
+            $query->where('expires_at', '>', now())
+                  ->orWhereNull('expires_at');
+        })
+        ->latest()
+        ->first();
 
-        if ($draft && $draft->isActive()) {
-            return $draft;
-        }
-
-        // Create new draft dengan expiry 24 jam
-        return OrderDraft::create([
-            'customer_id' => $customer->id,
-            'data' => $this->getEmptyDraftData($customer),
-            'step' => 'collecting_name',
-            'expires_at' => now()->addHours(24),
-        ]);
+    if ($draft && $draft->isActive()) {
+        return $draft;
     }
+
+    return OrderDraft::create([
+        'customer_id' => $customer->id,
+        'data' => $this->getEmptyDraftData($customer),
+        'step' => 'collecting_name',
+        'expires_at' => now()->addHours(24),
+    ]);
+}
 
     /**
      * Update draft dengan extracted parameters

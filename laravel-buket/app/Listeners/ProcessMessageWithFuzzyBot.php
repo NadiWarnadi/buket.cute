@@ -253,7 +253,6 @@ class ProcessMessageWithFuzzyBot
  */
 protected function handleStatusCheck(Customer $customer): void
 {
-    // Cari order terakhir customer (selain status 'completed' atau 'cancelled'? Sesuaikan)
     $lastOrder = $customer->orders()
         ->with('items.product')
         ->latest()
@@ -264,44 +263,66 @@ protected function handleStatusCheck(Customer $customer): void
         return;
     }
 
-    // Mapping status ke bahasa yang lebih ramah
+    // Status pesanan
     $statusText = [
-        'pending' => '⏳ menunggu konfirmasi admin',
-        'processing' => '🔄 sedang diproses',
-        'shipped' => '🚚 dalam pengiriman',
-        'delivered' => '✅ sudah sampai tujuan',
-        'cancelled' => '❌ dibatalkan',
+        'pending'   => '⏳ Menunggu konfirmasi admin',
+        'processing'=> '🔄 Sedang diproses',
+        'shipped'   => '🚚 Dalam pengiriman',
+        'delivered' => '✅ Sudah sampai tujuan',
+        'cancelled' => '❌ Dibatalkan',
     ][$lastOrder->status] ?? $lastOrder->status;
 
-    // Format detail pesanan
+    // Status pembayaran
+    $paymentStatus = $lastOrder->payment_status;
+    $paymentText = [
+        'pending' => 'Menunggu pembayaran',
+        'paid'    => '✅ Sudah dibayar',
+        'failed'  => '❌ Pembayaran gagal',
+        'refunded'=> '🔄 Dikembalikan',
+    ][$paymentStatus] ?? $paymentStatus;
+
+    // Deteksi metode
+    $method = $lastOrder->payment_method;
+    $methodText = [
+        'cod' => 'COD (Bayar di tempat)',
+        'bank_transfer' => 'Transfer Bank',
+        'qris' => 'QRIS',
+    ][$method] ?? $method;
+
+    // Format items
     $items = [];
     foreach ($lastOrder->items as $item) {
         $items[] = "- {$item->product->name} x{$item->quantity} = Rp " . number_format($item->subtotal, 0, ',', '.');
     }
     $itemList = empty($items) ? "Tidak ada item" : implode("\n", $items);
 
-      $reply = "📦 *Status Pesanan #{$lastOrder->id}*\n\n";
-    $reply .= "{$itemList}\n\n";
-    $reply .= "Status: {$statusText}\n\n";
-    $reply .= "Tanggal: " . $lastOrder->created_at->format('d/m/Y H:i') . "\n\n";
-     // Tambahkan pesan tambahan berdasarkan status dan metode pembayaran
-    if ($lastOrder->status === 'completed') {
-        if ($lastOrder->payment_method === 'cod') {
-            $reply .= "✅ *Buket sudah siap, Kak!*\nSilakan ambil di tempat ya. Terima kasih sudah berbelanja di Buket Cute! 🌸";
-        } else {
-            $reply .= "✅ *Pesanan selesai!*\nTerima kasih sudah berbelanja di Buket Cute. Sampai jumpa lagi! 🌸";
+    // Cek jika ada data Midtrans
+    $midtransInfo = '';
+    if ($paymentStatus === 'pending' && !empty($lastOrder->payment_data['transaction_id'])) {
+        $midtransInfo = "\n\n*Transaksi Midtrans:*\nID: {$lastOrder->payment_data['transaction_id']}";
+        if ($method === 'bank_transfer' && !empty($lastOrder->payment_data['va_numbers'])) {
+            $va = $lastOrder->payment_data['va_numbers'][0]['va_number'] ?? '-';
+            $bank = strtoupper($lastOrder->payment_data['va_numbers'][0]['bank'] ?? '');
+            $midtransInfo .= "\nVA: {$va} ({$bank})";
         }
-    } elseif ($lastOrder->status === 'processed') {
-        if ($lastOrder->payment_method === 'cod') {
-            $reply .= "🔄 *Pesanan sedang dibuat.*\nKami akan kabari jika sudah siap diambil. Terima kasih kesabarannya 🙏";
-        } else {
-            $reply .= "🔄 *Pesanan sedang diproses.*\nAdmin akan segera mengupdate status. Terima kasih 🙏";
-        }
-    } elseif ($lastOrder->status === 'pending') {
-        $reply .= "⏳ *Menunggu konfirmasi admin.*\nKami akan segera memproses pesanan Anda. Terima kasih 🙏";
-    } elseif ($lastOrder->status === 'cancelled') {
-        $reply .= "❌ Pesanan ini dibatalkan. Jika ada kendala, silakan hubungi admin.";
-    }    
+        $midtransInfo .= "\nStatus Midtrans: " . ($lastOrder->payment_data['transaction_status'] ?? 'pending');
+    }
+
+    $reply = "📦 *Status Pesanan #{$lastOrder->id}*\n\n"
+           . "{$itemList}\n\n"
+           . "Metode: {$methodText}\n"
+           . "Status Pesanan: {$statusText}\n"
+           . "Status Pembayaran: {$paymentText}"
+           . $midtransInfo
+           . "\n\nTanggal: " . $lastOrder->created_at->format('d/m/Y H:i');
+
+    // Tambahan pesan untuk COD
+    if ($lastOrder->status === 'completed' && $method === 'cod') {
+        $reply .= "\n\n✅ Silakan ambil di tempat. Terima kasih! 🌸";
+    } elseif ($paymentStatus === 'paid') {
+        $reply .= "\n\nPembayaran sudah diterima. Pesanan segera diproses lebih lanjut.";
+    }
+
     $this->replySender->send($customer, $reply);
 }
 

@@ -272,4 +272,27 @@ class PaymentManager
     {
         return self::STATUSES;
     }
+
+    /**
+ * Update payment status and data.
+ */
+public function updatePaymentStatus(Order $order, string $paymentStatus, array $additionalData = []): void
+{
+    $update = [
+        'payment_status' => $paymentStatus,
+    ];
+
+    // Merge payment_data
+    if (!empty($additionalData)) {
+        $existing = $order->payment_data ?? [];
+        $update['payment_data'] = array_merge($existing, $additionalData);
+    }
+
+    $order->update($update);
+
+    Log::info('Order payment status updated', [
+        'order_id' => $order->id,
+        'payment_status' => $paymentStatus,
+    ]);
+}
 }

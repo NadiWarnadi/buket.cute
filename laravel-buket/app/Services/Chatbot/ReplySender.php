@@ -84,4 +84,45 @@ class ReplySender
         // $property->setAccessible(true);
         return $property->getValue($conv);
     }
+ /**
+ * Kirim gambar ke customer menggunakan URL gambar.
+ * Method ini memanggil WhatsAppService::sendImageFromUrl() yang akan kita buat.
+ */
+public function sendImage(Customer $customer, string $imageUrl, string $caption = ''): void
+{
+    try {
+        $result = $this->wa->sendImageFromUrl($customer->phone, $imageUrl, $caption);
+        
+        if ($result['success']) {
+            // Catat ke messages
+            Message::create([
+                'customer_id' => $customer->id,
+                'message_id' => $result['message_id'] ?? 'img_' . uniqid(),
+                'from' => config('services.whatsapp.business_phone', 'system'),
+                'to' => $customer->phone,
+                'body' => $caption ?: '(gambar)',
+                'type' => 'image',
+                'status' => 'sent',
+                'is_incoming' => false,
+                'parsed' => true,
+                'chat_status' => 'active',
+            ]);
+
+            Log::channel('whatsapp')->info('Image sent successfully', [
+                'customer_id' => $customer->id,
+                'image_url' => $imageUrl,
+            ]);
+        } else {
+            Log::channel('whatsapp')->warning('Failed to send image', [
+                'customer_id' => $customer->id,
+                'error' => $result['error'] ?? 'Unknown',
+            ]);
+        }
+    } catch (\Exception $e) {
+        Log::channel('whatsapp')->error('Exception sending image', [
+            'customer_id' => $customer->id,
+            'error' => $e->getMessage(),
+        ]);
+    }
+}
 }

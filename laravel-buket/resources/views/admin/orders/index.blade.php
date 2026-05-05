@@ -32,12 +32,12 @@
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
         <form method="GET" class="row g-3 align-items-end">
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
                 <label for="search" class="form-label">Cari Pesanan</label>
                 <input type="text" class="form-control" id="search" name="search" placeholder="No/Pelanggan/HP..." value="{{ request('search') }}">
             </div>
-            <div class="col-12 col-md-3">
-                <label for="status" class="form-label">Status</label>
+            <div class="col-12 col-md-2">
+                <label for="status" class="form-label">Status Pesanan</label>
                 <select class="form-select" id="status" name="status" onchange="this.form.submit()">
                     <option value="all" @selected(!request('status') || request('status') == 'all')>Semua Status</option>
                     @foreach($statuses as $st)
@@ -45,19 +45,28 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-12 col-md-2">
+                <label for="payment_status" class="form-label">Status Bayar</label>
+                <select class="form-select" id="payment_status" name="payment_status" onchange="this.form.submit()">
+                    <option value="all" @selected(!request('payment_status') || request('payment_status') == 'all')>Semua</option>
+                    <option value="pending" @selected(request('payment_status') == 'pending')>Menunggu Bayar</option>
+                    <option value="paid" @selected(request('payment_status') == 'paid')>Sudah Dibayar</option>
+                    <option value="failed" @selected(request('payment_status') == 'failed')>Gagal</option>
+                    <option value="refunded" @selected(request('payment_status') == 'refunded')>Refund</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
                 <label for="sort" class="form-label">Urutkan</label>
                 <select class="form-select" id="sort" name="sort" onchange="this.form.submit()">
                     <option value="latest" @selected(request('sort') == 'latest' || !request('sort'))>Terbaru</option>
                     <option value="oldest" @selected(request('sort') == 'oldest')>Terlama</option>
-                    <option value="customer" @selected(request('sort') == 'customer')>Pelanggan</option>
                     <option value="total-high" @selected(request('sort') == 'total-high')>Total Tinggi</option>
                     <option value="total-low" @selected(request('sort') == 'total-low')>Total Rendah</option>
                 </select>
             </div>
             <div class="col-12 col-md-2">
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Cari
+                    <i class="bi bi-search"></i> Filter
                 </button>
             </div>
         </form>
@@ -71,12 +80,14 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 12%">No. Pesanan</th>
+                            <th style="width: 10%">No. Pesanan</th>
                             <th style="width: 20%">Pelanggan</th>
-                            <th style="width: 10%">Item</th>
-                            <th style="width: 18%">Total</th>
-                            <th style="width: 15%">Status</th>
-                            <th style="width: 15%">Tanggal</th>
+                            <th style="width: 8%">Item</th>
+                            <th style="width: 14%">Total</th>
+                            <th style="width: 12%">Metode Bayar</th>
+                            <th style="width: 12%">Status Bayar</th>
+                            <th style="width: 12%">Status</th>
+                            <th style="width: 12%">Tanggal</th>
                             <th style="width: 10%">Aksi</th>
                         </tr>
                     </thead>
@@ -97,9 +108,34 @@
                                     <strong>Rp{{ number_format($order->total_price, 0, ',', '.') }}</strong>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ $order->getStatusColor() }}">
-                                        {{ $order->getStatusLabel() }}
-                                    </span>
+                                    @php
+                                        $methodLabels = [
+                                            'cod' => 'COD',
+                                            'bank_transfer' => 'Transfer',
+                                            'qris' => 'QRIS',
+                                        ];
+                                    @endphp
+                                    <span class="badge bg-primary">{{ $methodLabels[$order->payment_method] ?? strtoupper($order->payment_method) }}</span>
+                                </td>
+                                <td>
+                                    @php
+                                        $paymentColor = [
+                                            'pending' => 'warning',
+                                            'paid' => 'success',
+                                            'failed' => 'danger',
+                                            'refunded' => 'info',
+                                        ][$order->payment_status] ?? 'secondary';
+                                        $paymentLabel = [
+                                            'pending' => 'Menunggu',
+                                            'paid' => 'Lunas',
+                                            'failed' => 'Gagal',
+                                            'refunded' => 'Refund',
+                                        ][$order->payment_status] ?? $order->payment_status;
+                                    @endphp
+                                    <span class="badge bg-{{ $paymentColor }}">{{ $paymentLabel }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ $order->getStatusColor() }}">{{ $order->getStatusLabel() }}</span>
                                 </td>
                                 <td>
                                     <small>{{ $order->created_at->format('d M Y H:i') }}</small>
