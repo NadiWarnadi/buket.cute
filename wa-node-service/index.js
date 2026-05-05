@@ -10,6 +10,7 @@ const { sendToLaravel } = require('./services/webhook');
 const authMiddleware = require('./middlewares/auth');
 const { processPendingJobs, getQueueStats } = require('./services/queue');
 const { cleanupOldJobs } = require('./services/queue');
+// const auth = require('./middlewares/auth');
 
 const app = express();
 app.use(express.json());
@@ -153,7 +154,7 @@ app.post('/api/send-media', authMiddleware, upload.single('file'), async (req, r
  * Dapatkan QR Code untuk scanning WhatsApp dari admin panel
  * Tidak perlu token untuk endpoint ini agar admin bisa scan tanpa perlu copy-paste token
  */
-app.get('/api/qr-code', (req, res) => {
+app.get('/api/qr-code', authMiddleware, (req, res) => {
     try {
         const qrCode = wa.getQRCode();
         

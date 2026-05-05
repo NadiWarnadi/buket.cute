@@ -13,7 +13,7 @@
   "type": "commonjs",
   "main": "index.js",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.8",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "axios": "^1.6.0",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^16.0.0",
@@ -22,7 +22,10 @@
     "multer": "^1.4.5-lts.1",
     "pino": "^8.0.0",
     "qrcode-terminal": "^0.12.0"
-  },
+  },"overrides": {
+  "protobufjs": "^7.2.4"
+},
+
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
