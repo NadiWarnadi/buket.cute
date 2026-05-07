@@ -12,6 +12,13 @@ class SettingController extends Controller
 {   
     public function index()
 {
+     $settings = [
+        'store_whatsapp' => SettingService::getDecrypted('store_whatsapp'),
+        'service_url' => SettingService::get('service_url'),
+        'api_key' => SettingService::getDecrypted('api_key'),
+        'webhook_key' => SettingService::getDecrypted('webhook_key'),
+        'business_phone' => SettingService::getDecrypted('business_phone'),
+    ];
     return view('admin.settings.index'); // bisa halaman utama pengaturan nanti
 }
 

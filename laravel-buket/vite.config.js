@@ -14,4 +14,9 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    resolve: {
+        alias: {
+            '/images': '/public/images',
+        },
+    },
 });

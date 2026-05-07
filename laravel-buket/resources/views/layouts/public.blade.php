@@ -17,10 +17,15 @@
     @vite(['resources/css/public-style.css', 'resources/js/public-script.js'])
     
     @yield('extra-css')
+    <script>
+    window.addEventListener('scroll', function() {
+        document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 50);
+    });
+</script>
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top"  id="mainNav">
         <div class="container">
             <a class="navbar-brand" href="{{ route('public.home') }}">
                  <img src="{{ asset('images/logo.png') }}" 
