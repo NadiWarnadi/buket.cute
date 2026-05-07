@@ -38,46 +38,38 @@ class ChatController extends Controller
     /**
      * Show customer conversation (all their messages)
      */
-    public function show(Customer $customer)
+      public function show(Customer $customer)
     {
-        $messages = $customer->messages()->orderBy('created_at', 'asc')->paginate(50);
+        // Tambahkan with('media') untuk eager load polymorphic media
+        $messages = $customer->messages()
+            ->with('media')
+            ->orderBy('created_at', 'asc')
+            ->paginate(50);
+
         $lastMessage = $customer->messages()->latest()->first();
 
         return view('admin.chat.show', compact('customer', 'messages', 'lastMessage'));
     }
 
-    /**
+      /**
      * Send reply message to customer
      */
     public function sendReply(Request $request, Customer $customer)
-    {   
-    
-         Log::debug('ChatController sendReply request', $request->all());
+    {
+        Log::debug('ChatController sendReply request', $request->all());
         try {
             $validated = $request->validate([
-                'body' => 'nullable|string|max:1000',
-                'type' => 'nullable|string|in:text,image,document',
+                'body'  => 'nullable|string|max:1000',
+                'type'  => 'nullable|string|in:text,image,document',
                 'media' => 'nullable|file|max:25600',
             ]);
 
             $messageBody = $request->body ? trim($request->body) : '';
-        
-        // 2. Cek apakah ada file
-        $hasFile = $request->hasFile('media') && $request->file('media')->isValid();
+            $hasFile = $request->hasFile('media') && $request->file('media')->isValid();
 
-        // 3. Validasi: Hanya error jika dua-duanya (teks DAN file) kosong
-        if (empty($messageBody) && !$hasFile) {
-            return redirect()->back()->with('error', 'Pesan atau file harus diisi.');
-        }
-            // Trim whitespace from body
-//             $messageBody = trim($validated['body']);
-//             if ($messageBody === '' && !$request->hasFile('media')) {
-//     return redirect()->back()->with('error', 'Pesan atau file harus diisi.');
-// }
-//             if (empty($messageBody)) {
-//                 return redirect()->route('admin.chat.show', $customer)
-//                     ->with('error', 'Pesan tidak boleh kosong!');
-//             }
+            if (empty($messageBody) && !$hasFile) {
+                return redirect()->back()->with('error', 'Pesan atau file harus diisi.');
+            }
 
             $messageType = $validated['type'] ?? 'text';
             $mediaPath = null;
@@ -85,27 +77,18 @@ class ChatController extends Controller
             $fileName = null;
 
             // Handle media upload
-           if ($hasFile) {
-            $file = $request->file('media');
-            $fileName = $file->getClientOriginalName();
-            
-            // Simpan ke storage/app/public/messages/...
-            $path = $file->store("messages/{$customer->id}", 'public');
-            $mediaPath = $path;
-            $mediaUrl = asset("storage/{$path}");
+            if ($hasFile) {
+                $file = $request->file('media');
+                $fileName = $file->getClientOriginalName();
+                $path = $file->store("messages/{$customer->id}", 'public');
+                $mediaPath = $path;
+                $mediaUrl = asset("storage/{$path}");
 
                 Log::channel('whatsapp')->info('Media file stored', [
-                'path' => $path,
-                'customer_id' => $customer->id,
-            ]);
-            }   
-
-            Log::debug('About to call sendMessageViaWhatsApp', [
-    'phone' => $customer->phone,
-    'body' => $messageBody,
-    'type' => $messageType,
-    'mediaPath' => $mediaPath,
-]);
+                    'path' => $path,
+                    'customer_id' => $customer->id,
+                ]);
+            }
 
             // Send via WhatsApp
             $waResponse = $this->sendMessageViaWhatsApp(
@@ -117,42 +100,36 @@ class ChatController extends Controller
 
             if (! $waResponse['success']) {
                 return redirect()->route('admin.chat.show', $customer)
-                    ->with('error', 'Gagal mengirim: '.$waResponse['message']);
+                    ->with('error', 'Gagal mengirim: ' . $waResponse['message']);
             }
+
             Log::debug('Response from sendMessageViaWhatsApp', $waResponse);
+
             // Create and save message
             $message = Message::create([
                 'customer_id' => $customer->id,
-                'message_id' => $waResponse['message_id'] ?? 'msg_'.time(),
-                'from' => 'admin',
-                'to' => $customer->phone,
-                'body' => $messageBody,
-                'type' => $messageType,
+                'message_id'  => $waResponse['message_id'] ?? 'msg_' . time(),
+                'from'        => 'admin',
+                'to'          => $customer->phone,
+                'body'        => $messageBody,
+                'type'        => $messageType,
                 'is_incoming' => false,
-                'status' => 'sent',
+                'status'      => 'sent',
                 'chat_status' => 'active',
-                'media_path' => $mediaPath,
-                'media_url' => $mediaUrl,
-                'file_name' => $fileName,
             ]);
 
-            // Save media record if file was uploaded
+            // Simpan media menggunakan relasi polymorphic, BUKAN Media::create manual
             if ($mediaPath && $fileName) {
-                Media::create([
-                    'message_id' => $message->id,
-                    'file_path' => $mediaPath,
-                    'file_name' => $fileName,
-                    'mime_type' => $request->file('media')->getMimeType(),
-                    'size' => $request->file('media')->getSize(),
-                    'file_type' => $messageType,
+                $message->media()->create([
+                    'file_path'  => $mediaPath,
+                    'file_name'  => $fileName,
+                    'mime_type'  => $request->file('media')->getMimeType(),
+                    'size'       => $request->file('media')->getSize(),
+                    'file_type'  => $messageType,
+                    // is_featured default false
                 ]);
             }
-                Log::debug('Preparing to send WhatsApp message', [
-                    'phone' => $customer->phone,
-                    'body' => $messageBody,
-                    'type' => $messageType,
-                    'mediaPath' => $mediaPath,
-                ]);
+
             Log::channel('whatsapp')->info('Message sent', ['to' => $customer->phone, 'message_id' => $message->id]);
 
             return redirect()->route('admin.chat.show', $customer)
@@ -160,15 +137,14 @@ class ChatController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error sending message', ['error' => $e->getMessage()]);
-
-            return redirect()->back()->with('error', 'Error: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
     /**
      * Mark message as read tapi kaya nya emmm ceklis dua biru di buat ketika admmin buka aja janagan sampai cat bot yang merubah
      */
-    public function markMessageAsRead(Request $request, Message $message)
+     public function markMessageAsRead(Request $request, Message $message)
     {
         try {
             if ($message->is_incoming === false) {
@@ -193,6 +169,7 @@ class ChatController extends Controller
             return response()->json(['success' => false, 'message' => 'Error'], 500);
         }
     }
+
 
     /**
      * Update chat status

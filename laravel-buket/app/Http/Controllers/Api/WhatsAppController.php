@@ -171,26 +171,29 @@ class WhatsAppController extends Controller
             $message = Message::create([
 
                 'customer_id' => $customer->id,
-                'order_id' => $validated['order_id'] ?? null,
-                'message_id' => $result['message_id'] ?? 'msg_'.time(),
-                'from' => env('WHATSAPP_BUSINESS_PHONE', 'system'),
-                'to' => $customer->phone,
-                'body' => $validated['caption'] ?? '['.strtoupper($mediaType).']',
-                'type' => $mediaType,
-                'status' => 'sent',
+                'order_id'    => $validated['order_id'] ?? null,
+                'message_id'  => $result['message_id'] ?? 'msg_'.time(),
+                'from'        => env('WHATSAPP_BUSINESS_PHONE', 'system'),
+                'to'          => $customer->phone,
+                'body'        => $validated['caption'] ?? '['.strtoupper($mediaType).']',
+                'type'        => $mediaType,
+                'status'      => 'sent',
                 'is_incoming' => false,
-                'parsed' => true,
-                'parsed_at' => now(),
+                'parsed'      => true,
+                'parsed_at'   => now(),
             ]);
 
             // Simpan info media
             $media = Media::create([
                 'message_id' => $message->id,
-                'file_path' => $filePath,
-                'file_name' => $file->getClientOriginalName(),
-                'file_type' => $mediaType,
-                'file_size' => $file->getSize(),
-                'mime_type' => $mimeType,
+                'file_path'  => $filePath,
+                'file_name'  => $file->getClientOriginalName(),
+                'file_type'  => $mediaType,
+                'file_size'  => $file->getSize(),
+                'mime_type'  => $mimeType,
+                // 'url'        => asset('storage/'.$filePath),  // URL publik
+                'model_type' => Message::class,               // polymorphic
+                'model_id'   => $message->id,   
             ]);
 
             Log::channel('whatsapp')->info('Outgoing media message', [

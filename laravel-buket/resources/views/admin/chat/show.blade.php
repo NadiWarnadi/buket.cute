@@ -165,37 +165,42 @@
 
                         <div class="message-group @if($msg->is_incoming) incoming @else outgoing @endif">
                             <div class="message-bubble @if($msg->is_incoming) incoming @else outgoing @endif">
-                               @if($msg->media->isNotEmpty())
-    @php
-        $mediaItem = $msg->media->first();
-        $mediaUrl = Storage::url($mediaItem->file_path);
-        $mime = $mediaItem->mime_type;
-    @endphp
-    <div class="message-media">
-        @if(Str::startsWith($mime, 'image/'))
-            <a href="{{ $mediaUrl }}" target="_blank">
-                <img src="{{ $mediaUrl }}" alt="Media" loading="lazy" style="max-width: 250px; border-radius: 8px;" />
-            </a>
-        @elseif(Str::startsWith($mime, 'video/'))
-            <video controls style="max-width: 250px; border-radius: 8px;">
-                <source src="{{ $mediaUrl }}" type="{{ $mime }}">
-                Browser tidak mendukung video.
-            </video>
-        @else
-            <div class="document-preview">
-                <i class="bi bi-file-earmark"></i>
-                <a href="{{ $mediaUrl }}" target="_blank">
-                    {{ $mediaItem->file_name ?? 'Unduh file' }}
-                </a>
-            </div>
-        @endif
-    </div>
-@elseif($msg->media_url)
-    <div class="message-media">
-        <i class="bi bi-link-45deg"></i>
-        <a href="{{ $msg->media_url }}" target="_blank">Lihat Media (WhatsApp)</a>
-    </div>
-@endif
+                                {{-- TAMPILKAN SEMUA MEDIA (POLYMORPHIC) --}}
+                                @if($msg->media->isNotEmpty())
+                                    <div class="message-media-grid">
+                                        @foreach($msg->media as $mediaItem)
+                                            @php
+                                                $mediaUrl = Storage::url($mediaItem->file_path);
+                                                $mime = $mediaItem->mime_type;
+                                            @endphp
+                                            <div class="message-media-item">
+                                                @if(Str::startsWith($mime, 'image/'))
+                                                    <a href="{{ $mediaUrl }}" target="_blank">
+                                                        <img src="{{ $mediaUrl }}" alt="{{ $mediaItem->file_name }}" loading="lazy" style="max-width: 250px; border-radius: 8px;" />
+                                                    </a>
+                                                @elseif(Str::startsWith($mime, 'video/'))
+                                                    <video controls muted style="max-width: 250px; border-radius: 8px;">
+                                                        <source src="{{ $mediaUrl }}" type="{{ $mime }}">
+                                                        Browser tidak mendukung video.
+                                                    </video>
+                                                @else
+                                                    <div class="document-preview">
+                                                        <i class="bi bi-file-earmark"></i>
+                                                        <a href="{{ $mediaUrl }}" target="_blank" title="{{ $mediaItem->file_name }}">
+                                                            {{ $mediaItem->file_name ?? 'Unduh file' }}
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @elseif($msg->media_url)
+                                    {{-- Fallback untuk kolom media_url lama (jika masih ada) --}}
+                                    <div class="message-media">
+                                        <i class="bi bi-link-45deg"></i>
+                                        <a href="{{ $msg->media_url }}" target="_blank">Lihat Media (WhatsApp)</a>
+                                    </div>
+                                @endif
 
                                 @if($msg->body)
                                     <div class="message-content">

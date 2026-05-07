@@ -22,7 +22,6 @@
 </div>
 
 @php
-    // Nomor WhatsApp tujuan (083824665074) – format internasional
     $waNumber = '083824665074';
     $waNumberClean = preg_replace('/[^0-9]/', '', $waNumber);
     if (substr($waNumberClean, 0, 1) === '0') {
@@ -32,14 +31,82 @@
 
 <div class="container py-4">
     <div class="row g-4">
-        <!-- Product Image -->
+        <!-- Product Media Section -->
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
-                @if($product->media->first())
-                    <img src="{{ $product->media->first()->getUrl() }}" 
-                         alt="{{ $product->name }}" 
-                         class="card-img-top" 
-                         style="height: 400px; object-fit: cover;">
+                @if($product->media->count() > 0)
+                    {{-- Carousel Bootstrap --}}
+                    <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
+                        @if($product->media->count() > 1)
+                            <div class="carousel-indicators">
+                                @foreach($product->media as $index => $media)
+                                    <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="{{ $index }}" @if($index === 0) class="active" @endif></button>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="carousel-inner">
+                            @foreach($product->media as $index => $media)
+                                @php
+                                    $isVideo = $media->file_type === 'video';
+                                    $isActive = $index === 0 ? 'active' : '';
+                                @endphp
+                                <div class="carousel-item {{ $isActive }}">
+                                    @if($isVideo)
+                                        <video class="d-block w-100" style="height: 400px; object-fit: cover;" autoplay muted loop playsinline>
+                                            <source src="{{ Storage::url($media->file_path) }}" type="{{ $media->mime_type }}">
+                                            Browser Anda tidak mendukung video.
+                                        </video>
+                                    @else
+                                        <img src="{{ Storage::url($media->file_path) }}" 
+                                             class="d-block w-100" 
+                                             alt="{{ $product->name }}" 
+                                             loading="lazy"
+                                             style="height: 400px; object-fit: cover;">
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+
+                        @if($product->media->count() > 1)
+                            <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- Thumbnail navigator (jika >1 media) --}}
+                    @if($product->media->count() > 1)
+                        <div class="row g-2 mt-2 px-2 pb-2">
+                            @foreach($product->media as $index => $media)
+                                <div class="col-3">
+                                    <div class="img-thumbnail position-relative" 
+                                         style="cursor: pointer; height: 80px; overflow: hidden;"
+                                         data-bs-target="#productCarousel" data-bs-slide-to="{{ $index }}">
+                                        @if($media->file_type === 'video')
+                                            <video class="w-100 h-100" style="object-fit: cover;" muted>
+                                                <source src="{{ Storage::url($media->file_path) }}">
+                                            </video>
+                                            <span class="position-absolute top-50 start-50 translate-middle text-white">
+                                                <i class="bi bi-play-circle-fill" style="font-size: 1.5rem;"></i>
+                                            </span>
+                                        @else
+                                            <img src="{{ Storage::url($media->file_path) }}" 
+                                                 alt="thumbnail" 
+                                                 class="w-100 h-100" 
+                                                 style="object-fit: cover;" 
+                                                 loading="lazy">
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 @else
                     <div class="card-body d-flex align-items-center justify-content-center" style="height: 400px; background-color: #f5f5f5;">
                         <div class="text-center text-muted">
@@ -49,20 +116,6 @@
                     </div>
                 @endif
             </div>
-
-            <!-- Other images (if any) -->
-            @if($product->media->count() > 1)
-                <div class="row g-2 mt-2">
-                    @foreach($product->media->take(3) as $media)
-                        <div class="col-3">
-                            <img src="{{ $media->getUrl() }}" 
-                                 alt="Galeri" 
-                                 class="img-thumbnail" 
-                                 style="cursor: pointer; height: 80px; object-fit: cover;">
-                        </div>
-                    @endforeach
-                </div>
-            @endif
         </div>
 
         <!-- Product Details -->
@@ -145,7 +198,6 @@
             <!-- Action Buttons -->
             <div class="d-grid gap-2 mb-4">
                 @if($product->stock > 0)
-                    <!-- Tombol WhatsApp langsung (tanpa AJAX) -->
                     <button class="btn btn-primary-custom btn-lg" id="orderBtn">
                         💬 Pesan via WhatsApp
                     </button>
@@ -212,9 +264,14 @@
             @foreach($related as $relatedProduct)
                 <div class="col-md-6 col-lg-3 mb-4">
                     <div class="card product-card h-100">
-                        @if($relatedProduct->media->first())
-                            <img src="{{ $relatedProduct->media->first()->getUrl() }}" 
-                                 alt="{{ $relatedProduct->name }}" class="product-image">
+                        @php
+                            $relatedMedia = $relatedProduct->media->first();
+                        @endphp
+                        @if($relatedMedia)
+                            <img src="{{ Storage::url($relatedMedia->file_path) }}" 
+                                 alt="{{ $relatedProduct->name }}" 
+                                 class="product-image" 
+                                 loading="lazy">
                         @else
                             <div class="product-image d-flex align-items-center justify-content-center bg-light">
                                 <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
@@ -340,7 +397,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const qty = parseInt(quantityInput.value);
         const total = productPrice * qty;
         
-        // Format pesan
         const message = `Halo, saya ingin memesan:
 *Produk:* ${productName}
 *Jumlah:* ${qty}
@@ -368,6 +424,14 @@ Apakah masih tersedia?`;
     .accordion-button:focus {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 0.25rem rgba(233, 30, 99, 0.25);
+    }
+
+    .carousel-item img, .carousel-item video {
+        border-radius: 15px 15px 0 0;
+    }
+
+    .img-thumbnail {
+        border-radius: 8px;
     }
 </style>
 @endsection

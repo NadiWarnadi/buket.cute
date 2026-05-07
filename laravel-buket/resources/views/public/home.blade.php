@@ -24,13 +24,29 @@
                 @foreach($featured as $product)
                     <div class="col-md-6 col-lg-3">
                         <div class="card product-card">
-                            {{-- Gambar produk --}}
-                            @if($product->media->first())
+                            {{-- Gambar / video thumbnail --}}
+                            @php
+                                $firstMedia = $product->media->first();
+                            @endphp
+                            @if($firstMedia)
                                 <div class="product-image-container">
-                                    <img src="{{ $product->media->first()->getUrl() }}" alt="{{ $product->name }}">
+                                    @if($firstMedia->file_type === 'video')
+                                        {{-- Thumbnail video: tombol play di atas placeholder --}}
+                                        <div class="video-thumb-placeholder d-flex align-items-center justify-content-center bg-dark"
+                                             style="height: 200px; border-radius: 15px 15px 0 0; cursor: pointer;"
+                                             onclick="window.location='{{ route('public.detail', $product->slug) }}'">
+                                            <i class="bi bi-play-circle-fill text-white" style="font-size: 3rem; opacity: 0.8;"></i>
+                                        </div>
+                                    @else
+                                        <img src="{{ Storage::url($firstMedia->file_path) }}" 
+                                             alt="{{ $product->name }}" 
+                                             loading="lazy"
+                                             class="img-fluid w-100"
+                                             style="height: 200px; object-fit: cover; border-radius: 15px 15px 0 0;">
+                                    @endif
                                 </div>
                             @else
-                                <div class="product-image-container d-flex align-items-center justify-content-center bg-light">
+                                <div class="product-image-container d-flex align-items-center justify-content-center bg-light" style="height: 200px; border-radius: 15px 15px 0 0;">
                                     <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
                                 </div>
                             @endif
@@ -113,12 +129,27 @@
                 @foreach($latest as $product)
                     <div class="col-6 col-md-4 col-lg-2">
                         <div class="card product-card">
-                            @if($product->media->first())
-                                <div class="product-image-container">
-                                    <img src="{{ $product->media->first()->getUrl() }}" alt="{{ $product->name }}">
+                            @php
+                                $firstMedia = $product->media->first();
+                            @endphp
+                            @if($firstMedia)
+                                <div class="product-image-container" style="height: 140px;">
+                                    @if($firstMedia->file_type === 'video')
+                                        <div class="video-thumb-placeholder d-flex align-items-center justify-content-center bg-dark h-100"
+                                             onclick="window.location='{{ route('public.detail', $product->slug) }}'"
+                                             style="cursor: pointer; border-radius: 15px 15px 0 0;">
+                                            <i class="bi bi-play-circle-fill text-white" style="font-size: 2rem; opacity: 0.7;"></i>
+                                        </div>
+                                    @else
+                                        <img src="{{ Storage::url($firstMedia->file_path) }}" 
+                                             alt="{{ $product->name }}" 
+                                             loading="lazy"
+                                             class="img-fluid w-100 h-100"
+                                             style="object-fit: cover; border-radius: 15px 15px 0 0;">
+                                    @endif
                                 </div>
                             @else
-                                <div class="product-image-container d-flex align-items-center justify-content-center bg-light">
+                                <div class="product-image-container d-flex align-items-center justify-content-center bg-light h-100" style="border-radius: 15px 15px 0 0;">
                                     <i class="bi bi-image text-muted"></i>
                                 </div>
                             @endif
@@ -249,6 +280,14 @@
     .cta-luxury h2 {
         color: var(--gold);
         font-family: 'Playfair Display', serif;
+    }
+    /* Placeholder video thumbnail */
+    .video-thumb-placeholder {
+        border-radius: 15px 15px 0 0;
+        transition: opacity 0.2s;
+    }
+    .video-thumb-placeholder:hover {
+        opacity: 0.9;
     }
 </style>
 @endsection

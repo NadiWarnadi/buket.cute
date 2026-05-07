@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Message extends Model
 {
@@ -23,9 +24,7 @@ class Message extends Model
         'is_incoming',
         'parsed',
         'parsed_at',
-        'media_path',
-        'media_url',
-        'file_name',
+    
     ];
 
     protected $casts = [
@@ -53,10 +52,12 @@ class Message extends Model
     /**
      * Relasi dengan Media
      */
-    public function media(): HasMany
-    {
-        return $this->hasMany(Media::class, 'message_id');
-    }
+public function media(): MorphMany 
+{
+    // 'model' di sini adalah instruksi untuk mencari prefix model_ di database
+    return $this->morphMany(Media::class, 'model');
+}
+
 
     /**
      * Scope: Get conversations (grouped by customer)
@@ -85,4 +86,30 @@ class Message extends Model
     {
         return $query->where('chat_status', 'active');
     }
+    /**
+ * Ambil path file media pertama.
+ */
+public function getFirstMediaPath(): ?string
+{
+    return $this->media->first()?->file_path;
+}
+
+/**
+ * Ambil nama file media pertama.
+ */
+public function getFirstMediaFileName(): ?string
+{
+    return $this->media->first()?->file_name;
+}
+
+/**
+ * Ambil URL publik untuk media pertama (fallback ke placeholder).
+ */
+public function getFirstMediaUrl(): string
+{
+    if ($path = $this->getFirstMediaPath()) {
+        return asset('storage/' . $path);
+    }
+    return asset('images/no-image.png'); // atau string kosong
+}
 }

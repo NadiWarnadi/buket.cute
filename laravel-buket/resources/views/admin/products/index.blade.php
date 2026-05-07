@@ -14,6 +14,7 @@
     </div>
 </div>
 
+{{-- Alert Section --}}
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle"></i> {{ session('success') }}
@@ -21,7 +22,14 @@
     </div>
 @endif
 
-<!-- Filter -->
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+<!-- Filter & Search Section -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
         <form method="GET" action="{{ route('admin.products.index') }}" class="row g-2 g-md-3">
@@ -45,25 +53,29 @@
     </div>
 </div>
 
+<!-- Main Table Section -->
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         @if($products->count())
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th class="text-center" style="width: 5%">No</th>
                             <th style="width: 10%">Status</th>
-                            <th style="width: 35%">Produk</th>
+                            <th style="width: 15%">Media</th>
+                            <th style="width: 25%">Detail Produk</th>
                             <th style="width: 15%">Kategori</th>
-                            <th style="width: 15%">Harga</th>
-                            <th style="width: 10%">Stok</th>
-                            <th style="width: 15%">Aksi</th>
+                            <th style="width: 15%">Harga & Stok</th>
+                            <th style="width: 15%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($products as $product)
                             <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                <td class="text-center text-muted small">
+                                    {{ $loop->iteration + ($products->firstItem() - 1) }}
+                                </td>
                                 <td>
                                     @if($product->is_active)
                                         <span class="badge bg-success">Aktif</span>
@@ -71,48 +83,58 @@
                                         <span class="badge bg-secondary">Nonaktif</span>
                                     @endif
                                 </td>
-                                <td style="width: 150px;">
-        <div id="carouselProduct{{ $product->id }}" class="carousel slide carousel-fade" data-bs-ride="carousel">
-            <div class="carousel-inner">
-                @forelse($product->media as $index => $item)
-                    <div class="carousel-item {{ $index == 0 ? 'active' : '' }}" data-bs-interval="2000">
-                        @if(Str::contains($item->mime_type, 'video'))
-                            <video src="{{ asset('storage/' . $item->file_path) }}" class="d-block w-100 rounded" style="height: 80px; object-fit: cover;" muted loop autoplay></video>
-                        @else
-                            <img src="{{ asset('storage/' . $item->file_path) }}" class="d-block w-100 rounded" style="height: 80px; object-fit: cover;" alt="Product Image" loading="lazy">
-                        @endif
-                    </div>
-                @empty
-                    <div class="carousel-item active">
-                        <img src="https://via.placeholder.com" class="d-block w-100 rounded" style="height: 80px; object-fit: cover;">
-                    </div>
-                @endforelse
-            </div>
-        </div>
-    </td>
                                 <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                     
-                                        <div>
-                                            <strong>{{ $product->name }}</strong>
-                                            <br><small class="text-muted">{{ $product->slug }}</small>
+                                    {{-- Carousel Media Polymorphic --}}
+                                    <div id="carouselProduct{{ $product->id }}" class="carousel slide carousel-fade" data-bs-ride="carousel">
+                                        <div class="carousel-inner">
+                                            @forelse($product->media->sortByDesc('is_featured') as $index => $item)
+                                                <div class="carousel-item {{ $index == 0 ? 'active' : '' }}" data-bs-interval="3000">
+                                                    @if(Str::contains($item->mime_type, 'video'))
+                                                        <video src="{{ asset('storage/' . $item->file_path) }}" 
+                                                               class="d-block w-100 rounded" 
+                                                               style="height: 80px; object-fit: cover;" 
+                                                               muted loop autoplay></video>
+                                                    @else
+                                                        <img src="{{ asset('storage/' . $item->file_path) }}" 
+                                                             class="d-block w-100 rounded" 
+                                                             style="height: 80px; object-fit: cover;" 
+                                                             alt="Product Image" loading="lazy">
+                                                    @endif
+                                                </div>
+                                            @empty
+                                                <div class="carousel-item active">
+                                                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 80px;">
+                                                        <i class="bi bi-image text-muted" style="font-size: 1.5rem;"></i>
+                                                    </div>
+                                                </div>
+                                            @endforelse
                                         </div>
                                     </div>
                                 </td>
-                                <td><small>{{ $product->category->name }}</small></td>
-                                <td><strong>Rp{{ number_format($product->price, 0, ',', '.') }}</strong></td>
                                 <td>
-                                    <span class="badge bg-info">{{ $product->stock }}</span>
+                                    <div class="fw-bold text-dark">{{ $product->name }}</div>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                        <i class="bi bi-link-45deg"></i> {{ $product->slug }}
+                                    </small>
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm" role="group">
+                                    <span class="text-muted small">{{ $product->category->name }}</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">Rp{{ number_format($product->price, 0, ',', '.') }}</div>
+                                    <span class="badge {{ $product->stock <= 5 ? 'bg-danger' : 'bg-info' }}" style="font-size: 0.7rem;">
+                                        Stok: {{ $product->stock }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
                                         <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-outline-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
                                         <a href="{{ route('admin.products.show', $product) }}" class="btn btn-outline-info" title="Lihat">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <form action="{{ route('admin.products.destroy', $product) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin ingin menghapus?')">
+                                        <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus produk ini?')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-outline-danger" title="Hapus">
@@ -127,17 +149,24 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
-            <div class="d-flex justify-content-center p-3">
-                {{ $products->links() }}
+            {{-- Pagination --}}
+            <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <small class="text-muted">
+                    Menampilkan {{ $products->firstItem() }} sampai {{ $products->lastItem() }} dari {{ $products->total() }} produk
+                </small>
+                <div>
+                    {{ $products->appends(request()->query())->links() }}
+                </div>
             </div>
         @else
             <div class="p-5 text-center">
-                <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                <p class="text-muted mt-3">Belum ada produk</p>
-                <a href="{{ route('admin.products.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Buat Produk Baru
-                </a>
+                <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+                <p class="text-muted mt-3">Tidak ada produk yang ditemukan.</p>
+                @if(request('search') || request('category_id'))
+                    <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary btn-sm">Bersihkan Filter</a>
+                @else
+                    <a href="{{ route('admin.products.create') }}" class="btn btn-primary">Buat Produk Pertama</a>
+                @endif
             </div>
         @endif
     </div>

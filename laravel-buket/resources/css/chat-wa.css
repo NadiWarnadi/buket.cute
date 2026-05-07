@@ -565,3 +565,40 @@
  .delegation-toggle i {
      margin-right: 4px;
  }
+
+ /* --- Polymorphic Media Grid di Pesan --- */
+.message-media-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.message-media-item {
+    flex: 0 0 auto;
+    max-width: 100%;
+}
+
+.message-media-item img,
+.message-media-item video {
+    display: block;
+    max-width: 250px;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.message-media-item .document-preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #f0f2f5;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.message-media-item .document-preview i {
+    font-size: 1.2rem;
+    color: #6c757d;
+}

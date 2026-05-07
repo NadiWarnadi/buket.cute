@@ -94,30 +94,36 @@
                         <div class="col-md-6 col-lg-4">
                             <div class="card product-card h-100">
                                 <!-- Product Image -->
-<div class="product-image-container" style="height: 200px; overflow: hidden; position: relative;">
-    @php
-        // Ambil foto utama (featured), jika tidak ada ambil foto pertama
-        $displayMedia = $product->media->where('is_featured', 1)->first() ?? $product->media->first();
-    @endphp
+                                <div class="product-image-container" style="height: 200px; overflow: hidden; position: relative;">
+                                    @php
+                                        // Ambil media featured, atau media pertama
+                                        $displayMedia = $product->media->where('is_featured', true)->first() ?? $product->media->first();
+                                    @endphp
 
-    @if($displayMedia)
-        <img src="{{ $displayMedia->getUrl() }}" 
-             alt="{{ $product->name }}" 
-             class="card-img-top w-100 h-100" 
-             style="object-fit: cover;">
-        
-        {{-- Label jika media adalah Video --}}
-        @if(Str::contains($displayMedia->mime_type, 'video'))
-            <span class="badge bg-primary position-absolute top-0 end-0 m-2">
-                <i class="bi bi-play-circle"></i> Video
-            </span>
-        @endif
-    @else
-        <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
-            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-        </div>
-    @endif
-</div>
+                                    @if($displayMedia)
+                                        @if($displayMedia->file_type === 'video')
+                                            {{-- Thumbnail video dengan ikon play --}}
+                                            <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-dark"
+                                                 onclick="window.location='{{ route('public.detail', $product->slug) }}'"
+                                                 style="cursor: pointer;">
+                                                <i class="bi bi-play-circle-fill text-white" style="font-size: 3rem; opacity: 0.8;"></i>
+                                            </div>
+                                            <span class="badge bg-primary position-absolute top-0 end-0 m-2">
+                                                <i class="bi bi-play-circle"></i> Video
+                                            </span>
+                                        @else
+                                            <img src="{{ Storage::url($displayMedia->file_path) }}" 
+                                                 alt="{{ $product->name }}" 
+                                                 loading="lazy"
+                                                 class="card-img-top w-100 h-100" 
+                                                 style="object-fit: cover;">
+                                        @endif
+                                    @else
+                                        <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light">
+                                            <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                        </div>
+                                    @endif
+                                </div>
 
                                 
                                 <!-- Product Info -->

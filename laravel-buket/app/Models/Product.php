@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 class Product extends Model
@@ -53,18 +54,20 @@ class Product extends Model
     /**
      * Get the media for the product
      */
-    public function media(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->orderBy('is_featured', 'desc');
-    }
+public function media(): MorphMany 
+{
+    // 'model' di sini adalah instruksi untuk mencari prefix model_ di database
+    return $this->morphMany(Media::class, 'model');
+}
+
 
     /**
      * Get the featured image for the product
      */
-    public function getFeaturedImage()
-    {
-        return $this->media()->where('is_featured', true)->first() ?? $this->media()->first();
-    }
+    // public function getFeaturedImage()
+    // {
+    //     return $this->media()->where('is_featured', true)->first() ?? $this->media()->first();
+    // }
 
     /**
      * Relasi dengan Ingredient (Many to Many)

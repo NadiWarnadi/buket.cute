@@ -57,14 +57,21 @@
                 @if($customers->count())
                     <div class="list-group list-group-flush">
                         @foreach($customers as $customer)
-                            <a href="{{ route('admin.chat.show', $customer) }}" class="list-group-item list-group-item-action p-3 border-bottom">
+                            @php
+                                // Ambil pesan terakhir dari relasi yang sudah diload
+                                $lastMessage = $customer->messages->first();
+                                $chatStatus = $customer->getChatStatus();
+                                $isUnread = false;
+                                if ($lastMessage && $lastMessage->is_incoming && $lastMessage->status !== 'read') {
+                                    $isUnread = true;
+                                }
+                            @endphp
+                            <a href="{{ route('admin.chat.show', $customer) }}" 
+                               class="list-group-item list-group-item-action p-3 border-bottom {{ $isUnread ? 'bg-unread' : '' }}">
                                 <div class="d-flex justify-content-between align-items-start gap-3">
                                     <div class="flex-grow-1">
                                         <h6 class="mb-1 d-flex align-items-center gap-2">
                                             {{ $customer->name ?? $customer->phone }}
-                                            @php
-                                                $chatStatus = $customer->getChatStatus();
-                                            @endphp
                                             @if($chatStatus === 'active')
                                                 <span class="badge bg-success">Aktif</span>
                                             @elseif($chatStatus === 'archived')
@@ -72,13 +79,13 @@
                                             @else
                                                 <span class="badge bg-secondary">Ditutup</span>
                                             @endif
+                                            @if($isUnread)
+                                                <span class="badge bg-primary rounded-pill ms-1">Baru</span>
+                                            @endif
                                         </h6>
                                         <p class="text-muted small mb-1">
                                             <i class="bi bi-telephone"></i> {{ $customer->phone }}
                                         </p>
-                                        @php
-                                            $lastMessage = $customer->getLastMessage();
-                                        @endphp
                                         @if($lastMessage)
                                             <p class="text-muted small mb-0">
                                                 @if($lastMessage->is_incoming)
@@ -86,8 +93,10 @@
                                                 @else
                                                     <i class="bi bi-arrow-up-right text-success"></i>
                                                 @endif
-                                                {{ Str::limit($lastMessage->body, 80) }}
+                                                {{ Str::limit($lastMessage->body ?: '[media]', 80) }}
                                             </p>
+                                        @else
+                                            <p class="text-muted small mb-0">-</p>
                                         @endif
                                     </div>
                                     <div class="text-end small text-muted">
@@ -126,6 +135,14 @@
     .list-group-item {
         transition: background-color 0.2s ease;
     }
+
+    /* Highlight background untuk percakapan yang memiliki pesan baru */
+    .bg-unread {
+        background-color: #e7f3ff !important; /* Biru muda khas WhatsApp Web */
+    }
+
+    .bg-unread:hover {
+        background-color: #d9ebfe !important;
+    }
 </style>
 @endsection
-
