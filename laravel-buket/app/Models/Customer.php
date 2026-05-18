@@ -13,6 +13,10 @@ class Customer extends Model
         'name',
         'phone',
         'address',
+            'is_admin_handled',   
+    'current_context',    // ← opsional, supaya ConversationManager bisa pakai mass assignment juga
+    'retry_count',        // ← opsional
+    'last_question',      
     ];
 
     // Relasi dengan Order
