@@ -11,19 +11,20 @@ use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\ComplaintController;
+use App\Http\Controllers\Admin\RecipeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PublicController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect home to public site
-Route::get('/', [PublicController::class, 'home'])->name('public.home');
+Route::get('/', [PublicController::class, 'home'])->name('public.home')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
 
 // Public pages
-Route::get('/katalog', [PublicController::class, 'catalog'])->name('public.catalog');
-Route::get('/produk/{slug}', [PublicController::class, 'detail'])->name('public.detail');
-Route::get('/tentang', [PublicController::class, 'about'])->name('public.about');
+Route::get('/katalog', [PublicController::class, 'catalog'])->name('public.catalog')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
+Route::get('/produk/{slug}', [PublicController::class, 'detail'])->name('public.detail')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
+Route::get('/tentang', [PublicController::class, 'about'])->name('public.about')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
 Route::get('/kontak', [PublicController::class, 'contact'])->name('public.contact');
-Route::get('/faq', [PublicController::class, 'faq'])->name('public.faq');
+Route::get('/faq', [PublicController::class, 'faq'])->name('public.faq')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
 Route::get('/custom-request', [PublicController::class, 'customRequest'])->name('public.customRequest');
 Route::post('/custom-request', [PublicController::class, 'submitCustomRequest'])->name('public.submitCustomRequest');
 
@@ -83,6 +84,15 @@ Route::middleware(['auth'])->group(function () {
             Route::get('stock', [ReportController::class, 'stock'])->name('reports.stock');
             Route::get('chat', [ReportController::class, 'chat'])->name('reports.chat');
             Route::get('export-sales', [ReportController::class, 'exportSales'])->name('reports.export-sales');
+        });
+
+        Route::prefix('recipes')->name('recipes.')->controller(RecipeController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{product}/{ingredient}/edit', 'edit')->name('edit');
+            Route::put('/{product}/{ingredient}', 'update')->name('update');
+            Route::delete('/{product}/{ingredient}', 'destroy')->name('destroy');
         });
 
         // Fuzzy Rules

@@ -79,13 +79,37 @@
                 <i class="bi bi-box-seam"></i> Produk
             </a>
 
-            <a href="{{ route('admin.ingredients.index') }}" class="sidebar-item {{ Route::is('admin.ingredients.*') ? 'active' : '' }}">
+            <!-- Dropdown Bahan -->
+<div class="sidebar-item-group">
+    <a href="#bahanDropdown" 
+       class="sidebar-toggle-link {{ Route::is('admin.ingredients.*','admin.recipes.*','admin.purchases.*') ? 'active' : '' }}" 
+       data-bs-toggle="collapse" 
+       role="button" 
+       aria-expanded="{{ Route::is('admin.ingredients.*','admin.recipes.*','admin.purchases.*') ? 'true' : 'false' }}">
+        <i class="bi bi-database"></i> 
+        <span>Data Bahan</span>
+        <i class="bi bi-chevron-down ms-auto fs-xs"></i>
+    </a>
+    <div class="collapse {{ Route::is('admin.ingredients.*','admin.recipes.*','admin.purchases.*') ? 'show' : '' }}" id="bahanDropdown">
+        <a href="{{ route('admin.ingredients.index') }}" class="sidebar-item-sub {{ Route::is('admin.ingredients.*') ? 'active' : '' }}">
+            <i class="bi bi-flower1 me-2"></i> Bahan Baku
+        </a>
+        <a href="{{ route('admin.recipes.index') }}" class="sidebar-item-sub {{ Route::is('admin.recipes.*') ? 'active' : '' }}">
+            <i class="bi bi-journal-check me-2"></i> Resep
+        </a>
+        <a href="{{ route('admin.purchases.index') }}" class="sidebar-item-sub {{ Route::is('admin.purchases.*') ? 'active' : '' }}">
+            <i class="bi bi-bag-check me-2"></i> Pembelian Bahan
+        </a>
+    </div>
+</div>
+
+            {{-- <a href="{{ route('admin.ingredients.index') }}" class="sidebar-item {{ Route::is('admin.ingredients.*') ? 'active' : '' }}">
                 <i class="bi bi-flower1"></i> Bahan Baku
             </a>
 
             <a href="{{ route('admin.purchases.index') }}" class="sidebar-item {{ Route::is('admin.purchases.*') ? 'active' : '' }}">
-                <i class="bi bi-bag-check"></i> Pembelian
-            </a>
+                <i class="bi bi-bag-check"></i> Pembelian Bahan
+            </a> --}}
 
             <a href="{{ route('admin.chat.index') }}" class="sidebar-item {{ Route::is('admin.chat.*') ? 'active' : '' }}">
                 <i class="bi bi-chat-dots"></i> Chat WhatsApp

@@ -78,7 +78,7 @@ class FuzzyRule extends Model
         return  $bestMatch;
     }
 
-    /**
+/**
      * Calculate similarity between message and pattern
      * Using multiple fuzzy matching techniques
      * 
@@ -105,20 +105,18 @@ class FuzzyRule extends Model
                 return 1.0;
             }
 
-            // 2. Substring match (80% score)
-              if (str_contains($message, $pattern)) {
+            // 2. Substring match (95% score)
+            if (str_contains($message, $pattern)) {
                 $maxScore = max($maxScore, 0.95);
                 continue;
             }
 
             // 3. Similar text using PHP built-in
             similar_text($message, $pattern, $percent);
-            $simScore = $percent / 100;
 
-            //parameteer typo
+            // --- PERBAIKAN DI SINI ---
+            // Kita hitung Levenshtein dulu untuk menangani typo
             $levScore = 0;
-            $maxLen = max(strlen($message), strlen($pattern));
-            // 4. Levenschtein distance (for typos)
             if (function_exists('levenshtein')) {
                 $messageLen = strlen($message);
                 $patternLen = strlen($pattern);
@@ -128,16 +126,22 @@ class FuzzyRule extends Model
                     $lev = levenshtein($message, $pattern);
                     $levScore = 1 - ($lev / $maxLen);
                     
-                    // Weight Levenshtein score if close
+                    // Jika skor Levenshtein bagus (typo ringan), 
+                    // kita update variabel $percent agar sinkron
                     if ($levScore > 0.65) {
-                        $percent = max($percent, $levScore * 0.95);
+                        $percent = max($percent, ($levScore * 100) * 0.95);
                     }
                 }
             }
+
+            // Sekarang kita hitung simScore SETELAH semua koreksi di atas selesai
+            $simScore = $percent / 100;
+            
+            // Ambil skor tertinggi antara similar_text (yang sudah dikoreksi) dan skor murni levenshtein
             $currentPatternScore = max($simScore, $levScore);
             $maxScore = max($maxScore, $currentPatternScore);
 
-            // Stop early if we have high confidence
+            // Stop early jika sudah sangat yakin
             if ($maxScore >= 0.95) {
                 break;
             }

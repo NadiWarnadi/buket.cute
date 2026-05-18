@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderItemIngredient; // Tambahan
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,6 +70,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'status' => 'required|in:pending,processed,completed,cancelled',
+              'payment_method' => 'required|in:cod,transfer,qris',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'nullable|exists:products,id',
             'items.*.custom_description' => 'nullable|string|max:255',
@@ -92,6 +94,7 @@ class OrderController extends Controller
                 'total_price' => $totalPrice,
                 'status' => $validated['status'],
                 'notes' => $validated['notes'] ?? null,
+                 'payment_method' => $validated['payment_method'], 
             ]);
 
             // Buat order items
@@ -104,6 +107,11 @@ class OrderController extends Controller
                     'price' => $item['price'],
                     'subtotal' => $item['quantity'] * $item['price'],
                 ]);
+            }
+
+            // Tambahan: jika status langsung processed, kurangi stok
+            if ($order->status === 'processed') {
+                $this->processOrderIngredients($order);
             }
 
             DB::commit();
@@ -151,6 +159,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'status' => 'required|in:pending,processed,completed,cancelled',
+              'payment_method' => 'required|in:cod,transfer,qris',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'nullable|exists:products,id',
             'items.*.custom_description' => 'nullable|string|max:255',
@@ -174,6 +183,7 @@ class OrderController extends Controller
                 'total_price' => $totalPrice,
                 'status' => $validated['status'],
                 'notes' => $validated['notes'] ?? null,
+                 'payment_method' => $validated['payment_method'], 
             ]);
 
             // Hapus items lama
@@ -189,6 +199,11 @@ class OrderController extends Controller
                     'price' => $item['price'],
                     'subtotal' => $item['quantity'] * $item['price'],
                 ]);
+            }
+
+            // Tambahan: jika status menjadi processed, kurangi stok
+            if ($order->status === 'processed') {
+                $this->processOrderIngredients($order);
             }
 
             DB::commit();
@@ -227,8 +242,54 @@ class OrderController extends Controller
             'status' => 'required|in:pending,processed,completed,cancelled',
         ]);
 
+        $oldStatus = $order->status;
         $order->update(['status' => $validated['status']]);
 
+        // Tambahan: jika status berubah menjadi processed, kurangi stok (hanya sekali)
+        if ($validated['status'] === 'processed' && $oldStatus !== 'processed') {
+            $this->processOrderIngredients($order);
+        }
+
         return redirect()->back()->with('success', 'Status pesanan berhasil diperbarui.');
+    }
+
+    /**
+     * ============================================
+     * METHOD TAMBAHAN: Kurangi stok bahan baku
+     * ============================================
+     */
+    private function processOrderIngredients(Order $order): void
+    {
+        // Cegah pemotongan ganda
+        $alreadyProcessed = OrderItemIngredient::whereHas('orderItem', function ($q) use ($order) {
+            $q->where('order_id', $order->id);
+        })->exists();
+
+        if ($alreadyProcessed) {
+            return;
+        }
+
+        foreach ($order->items as $orderItem) {
+            $product = $orderItem->product;
+            if (!$product) continue; // custom item tidak ada resep
+
+            $recipeItems = $product->productIngredients; // dari product_ingredient
+            if ($recipeItems->isEmpty()) continue;
+
+            foreach ($recipeItems as $recipe) {
+                $ingredient = $recipe->ingredient;
+                $quantityNeeded = $recipe->quantity * $orderItem->quantity;
+
+                // Catat pemakaian bahan
+                OrderItemIngredient::create([
+                    'order_item_id' => $orderItem->id,
+                    'ingredient_id' => $ingredient->id,
+                    'quantity' => $quantityNeeded,
+                ]);
+
+                // Kurangi stok (biarkan minus)
+                $ingredient->decrement('stock', $quantityNeeded);
+            }
+        }
     }
 }

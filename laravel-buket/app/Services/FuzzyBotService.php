@@ -411,4 +411,47 @@ MSG;
             'response' => 'Maaf, saya tidak mengerti. Ketik "iya" untuk lanjut atau "ubah" untuk mengubah data.',
         ];
     }
+    /**
+ * Tangani konfirmasi pembayaran manual (intent payment_confirmation)
+ * Dipanggil saat state IDLE, atau dari luar flow order.
+ */
+public function handlePaymentConfirmation(\App\Models\Customer $customer, string $message): array
+{
+    // Ambil order terakhir dengan pembayaran pending (kecuali COD)
+    $order = \App\Models\Order::where('customer_id', $customer->id)
+                ->whereIn('payment_status', ['pending', 'manual_check'])
+                ->whereIn('payment_method', ['bank_transfer', 'qris'])
+                ->latest()
+                ->first();
+
+    if (!$order) {
+        return [
+            'matched' => true,
+            'response' => "Saat ini tidak ada pembayaran yang menunggu verifikasi. Ketik 'status' untuk cek pesanan ya.",
+        ];
+    }
+
+    // Cek apakah pesan mengandung indikasi bukti gambar (deteksi teks saja)
+    $lowMsg = strtolower($message);
+    $isSendingProof = preg_match('/kirim bukti|attach|gambar|foto|screenshot|ini bukti|bukti transfer/', $lowMsg);
+
+    if ($isSendingProof) {
+        // Update status sementara dan beri notifikasi
+        $order->payment_status = 'manual_check';
+        $order->save();
+
+        return [
+            'matched' => true,
+            'action' => 'payment_proof_received',
+            'response' => "Terima kasih! Bukti pembayaran sudah kami terima. Admin akan segera memverifikasi ya.",
+        ];
+    } else {
+        // Belum ada bukti
+        return [
+            'matched' => true,
+            'action' => 'request_proof',
+            'response' => "Silakan kirim bukti transfer/QRIS-nya di sini ya. Bisa berupa gambar atau screenshot.",
+        ];
+    }
+}
 }

@@ -16,102 +16,123 @@ class ReportController extends Controller
      * Sales Report - Laporan Penjualan
      */
     public function sales(Request $request)
-    {
-        $startDate = $request->start_date ? Carbon::createFromFormat('Y-m-d', $request->start_date) : Carbon::now()->startOfMonth();
-        $endDate = $request->end_date ? Carbon::createFromFormat('Y-m-d', $request->end_date) : Carbon::now()->endOfDay();
+{
+    $startDate = $request->start_date
+        ? Carbon::createFromFormat('Y-m-d', $request->start_date)
+        : Carbon::now()->startOfMonth();
+    $endDate = $request->end_date
+        ? Carbon::createFromFormat('Y-m-d', $request->end_date)
+        : Carbon::now()->endOfDay();
 
-        $productSales = collect([]);
-        // ini untuk keranggka ketika data kosong
-        $orders = Order::with('customer')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->latest()
-            ->paginate(10);
-        // Statistik umum
-        $totalOrders = Order::whereBetween('created_at', [$startDate, $endDate])->count();
-        $totalRevenue = Order::whereBetween('created_at', [$startDate, $endDate])->sum('total_price');
-        $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
+    // ✅ Produk Terlaris (dari order_items + products + orders)
+    $productSales = DB::table('order_items')
+        ->join('products', 'order_items.product_id', '=', 'products.id')
+        ->join('orders', 'order_items.order_id', '=', 'orders.id')
+        ->whereBetween('orders.created_at', [$startDate, $endDate])
+        ->where('orders.status', '!=', 'cancelled') // abaikan pesanan dibatalkan
+        ->groupBy('order_items.product_id', 'products.name')
+        ->select(
+            'products.name as name',
+            DB::raw('SUM(order_items.quantity) as quantity'),
+            DB::raw('SUM(order_items.subtotal) as revenue')
+        )
+        ->orderByDesc('revenue')
+        ->get();
 
-        // Order status breakdown
-        $statusBreakdown = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('status')
-            ->selectRaw('status, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
-            ->get();
+    // Data pesanan
+    $orders = Order::with('customer')
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->latest()
+        ->paginate(10);
 
-        // Daily sales data untuk chart
-        $dailySales = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->groupByRaw('DATE(created_at)') // Gunakan groupByRaw
-            ->selectRaw('DATE(created_at) as date, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
-            ->orderBy('date')
-            ->get();
+    // Statistik umum
+    $totalOrders = Order::whereBetween('created_at', [$startDate, $endDate])->count();
+    $totalRevenue = Order::whereBetween('created_at', [$startDate, $endDate])->sum('total_price');
+    $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 
-        // Top customers
-        $topCustomers = Order::whereBetween('created_at', [$startDate, $endDate])
-            ->with('customer')
-            ->groupBy('customer_id')
-            ->selectRaw('customer_id, count(*) as count, sum(total_price) as total') // Gunakan selectRaw
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get();
+    // Order status breakdown
+    $statusBreakdown = Order::whereBetween('created_at', [$startDate, $endDate])
+        ->groupBy('status')
+        ->selectRaw('status, count(*) as count, sum(total_price) as total')
+        ->get();
 
-        return view('admin.reports.sales', compact(
-            'orders',
-            'productSales',
-            'totalOrders',
-            'totalRevenue',
-            'avgOrderValue',
-            'statusBreakdown',
-            'dailySales',
-            'topCustomers',
-            'startDate',
-            'endDate'
-        ));
-    }
+    // Daily sales data untuk chart
+    $dailySales = Order::whereBetween('created_at', [$startDate, $endDate])
+        ->groupByRaw('DATE(created_at)')
+        ->selectRaw('DATE(created_at) as date, count(*) as count, sum(total_price) as total')
+        ->orderBy('date')
+        ->get();
+
+    // Top customers
+    $topCustomers = Order::whereBetween('created_at', [$startDate, $endDate])
+        ->with('customer')
+        ->groupBy('customer_id')
+        ->selectRaw('customer_id, count(*) as count, sum(total_price) as total')
+        ->orderByDesc('total')
+        ->limit(10)
+        ->get();
+
+    return view('admin.reports.sales', compact(
+        'orders',
+        'productSales',
+        'totalOrders',
+        'totalRevenue',
+        'avgOrderValue',
+        'statusBreakdown',
+        'dailySales',
+        'topCustomers',
+        'startDate',
+        'endDate'
+    ));
+}
 
     /**
      * Stock Report - Laporan Stok Bahan Baku
      */
-    public function stock(Request $request)
-    {
-        // stok produk
-        $products = \App\Models\Product::orderBy('stock')->take(5)->get();
-        // bahan bahan
-        $ingredients = Ingredient::query();
+  public function stock(Request $request)
+{
+    // stok produk (5 produk dengan stok terendah)
+    $products = \App\Models\Product::orderBy('stock')->take(5)->get();
 
-        if ($request->status === 'low') {
-            $ingredients->whereRaw('stock <= min_stock AND min_stock > 0');
-        } elseif ($request->status === 'empty') {
-            $ingredients->where('stock', 0);
-        }
+    // bahan bahan dengan filter
+    $ingredientsQuery = Ingredient::query();
 
-        if ($request->search) {
-            $ingredients->where('name', 'like', "%{$request->search}%");
-        }
+    if ($request->status === 'low') {
+        $ingredientsQuery->whereRaw('stock <= min_stock AND min_stock > 0');
+    } elseif ($request->status === 'empty') {
+        $ingredientsQuery->where('stock', 0);
+    }
 
-        $ingredients = $ingredients->orderBy('stock')->paginate(20);
+    if ($request->search) {
+        $search = $request->search;
+        $ingredientsQuery->where('name', 'like', "%{$search}%");
+    }
 
-        // Summary data
-        $totalIngredients = Ingredient::count();
-        $lowStockCount = Ingredient::whereRaw('stock <= min_stock AND min_stock > 0')->count();
-        $emptyStockCount = Ingredient::where('stock', 0)->count();
+    $ingredients = $ingredientsQuery->orderBy('stock')->paginate(20);
 
-        // Stock movements untuk month ini
-        $monthlyMovements = \App\Models\StockMovement::whereBetween('created_at', [
+    // Summary data
+    $totalIngredients = Ingredient::count();
+    $lowStockCount = Ingredient::whereRaw('stock <= min_stock AND min_stock > 0')->count();
+    $emptyStockCount = Ingredient::where('stock', 0)->count();
+
+    // Riwayat pergerakan stok bulan ini (detail, bukan agregat)
+    $monthlyMovements = \App\Models\StockMovement::with('ingredient')
+        ->whereBetween('created_at', [
             Carbon::now()->startOfMonth(),
             Carbon::now()->endOfMonth(),
         ])
-            ->groupBy('ingredient_id')
-            ->select('ingredient_id', DB::raw('count(*) as count'))
-            ->get();
+        ->latest()
+        ->paginate(20);
 
-        return view('admin.reports.stock', compact(
-            'ingredients',
-            'products',
-            'totalIngredients',
-            'lowStockCount',
-            'emptyStockCount',
-            'monthlyMovements'
-        ));
-    }
+    return view('admin.reports.stock', compact(
+        'products',
+        'ingredients',
+        'totalIngredients',
+        'lowStockCount',
+        'emptyStockCount',
+        'monthlyMovements'
+    ));
+}
 
     /**
      * Chat Report - Laporan Percakapan

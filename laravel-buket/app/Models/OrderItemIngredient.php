@@ -13,7 +13,7 @@ class OrderItemIngredient extends Model
         'order_item_id',
         'ingredient_id',
         'quantity',
-        'unit',
+        // 'unit',
     ];
 
     /**

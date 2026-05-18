@@ -75,7 +75,7 @@ public function media(): MorphMany
     public function ingredients(): BelongsToMany
     {
         return $this->belongsToMany(Ingredient::class, 'product_ingredient')
-            ->withPivot('quantity', 'unit')
+            ->withPivot('quantity')
             ->withTimestamps();
     }
 

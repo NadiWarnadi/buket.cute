@@ -149,6 +149,10 @@ class ProcessMessageWithFuzzyBot
          $this->handleComplaint($conv, $customer, $userMessage);
     break;
 
+    case 'payment_confirmation':
+        $this->handlePaymentConfirmationFromText($customer, $userMessage);
+    break;
+
     case 'help':
         $this->handleHelp($conv, $customer);
         break;
@@ -162,10 +166,32 @@ class ProcessMessageWithFuzzyBot
     /**
      * Tangani sapaan: reset state dan kirim balasan ramah.
      */
+    /**
+     * Tangani sapaan: reset state dan kirim balasan ramah.
+     * Perbaikan: Cek jika sedang dalam order flow sebelum reset.
+     */
     protected function handleGreeting(ConversationManager $conv, Customer $customer, array $payload): void
     {
+        $state = $conv->getState();
+        $orderStates = [
+            ConversationManager::STATE_ORDERING_NAME,
+            ConversationManager::STATE_ORDERING_PRODUCT,
+            ConversationManager::STATE_ORDERING_QUANTITY,
+            ConversationManager::STATE_ORDERING_ADDRESS,
+            ConversationManager::STATE_ORDERING_PAYMENT, 
+            ConversationManager::STATE_ORDERING_CONFIRMING,
+        ];
+
+        // --- PERBAIKAN: Jika sedang order, jangan reset paksa ---
+        if (in_array($state, $orderStates)) {
+            $reply = "Halo! Kakak sedang dalam proses pemesanan. 😊\n\n" .
+                     "Apakah Kakak ingin membatalkan pesanan ini dan mulai ulang? (Ketik 'batal' untuk reset, atau lanjut isi data sebelumnya)";
+            $this->replySender->send($customer, $reply);
+            return;
+        }
+
+        // Jika tidak sedang order, baru lakukan reset normal
         $conv->reset();
-        // Hapus draft jika ada
         $draft = $this->orderDraftService->getCustomerActiveDraft($customer);
         if ($draft) {
             $draft->delete();
@@ -175,7 +201,7 @@ class ProcessMessageWithFuzzyBot
             'payload' => $payload,
             'pushname' => $payload['pushname'] ?? 'MISSING'
         ]);
-        // Ambil pushname dari payload (dikirim oleh Node.js)
+
         $displayName = $payload['pushname'] ?? 'Kak';
         $reply = "Halo, {$displayName}! Selamat datang di Buket Cute. Ada yang bisa saya bantu? 😊";
         $this->replySender->send($customer, $reply);
@@ -329,48 +355,41 @@ protected function handleStatusCheck(Customer $customer): void
     /**
      * Tangani bukti pembayaran (image message)
      */
-    protected function handlePaymentProof(Message $message, Customer $customer): void
-    {
-        // Cari order pending payment untuk customer ini
-        $pendingOrder = $customer->orders()
-            ->where('payment_method', 'bank_transfer')
-            ->where('payment_status', 'pending')
-            ->latest()
-            ->first();
+protected function handlePaymentProof(Message $message, Customer $customer): void
+{
+    // Cari pesanan dengan pembayaran menunggu (transfer bank atau QRIS)
+    $pendingOrder = $customer->orders()
+        ->whereIn('payment_method', ['bank_transfer', 'qris'])
+        ->whereIn('payment_status', ['pending', 'manual_check'])
+        ->latest()
+        ->first();
 
-        if (!$pendingOrder) {
-            // Tidak ada order pending, kirim pesan bahwa bukti tidak diharapkan
-            $this->replySender->send($customer, "Terima kasih telah mengirim gambar. Jika ini bukti pembayaran, silakan lakukan pemesanan terlebih dahulu atau hubungi admin untuk bantuan.");
-            return;
-        }
-
-        // Proses bukti pembayaran
-        $result = $this->paymentManager->processPaymentProof($message, $pendingOrder);
-
-        if ($result['success']) {
-            $confirmationMessage = "✅ *Bukti pembayaran diterima!*\n\n" .
-                                 "Pesanan Anda sedang diverifikasi oleh admin.\n" .
-                                 "Status pembayaran akan diupdate dalam 1-2 jam.\n\n" .
-                                 "Terima kasih telah berbelanja di Buket Cute! 🌸";
-
-            $this->replySender->send($customer, $confirmationMessage);
-
-            Log::channel('whatsapp')->info('Payment proof processed successfully', [
-                'customer_id' => $customer->id,
-                'order_id' => $pendingOrder->id,
-                'message_id' => $message->id,
-            ]);
-        } else {
-            $this->replySender->send($customer, "❌ " . $result['error'] . "\n\nSilakan kirim ulang bukti pembayaran yang jelas atau hubungi admin untuk bantuan.");
-
-            Log::channel('whatsapp')->warning('Payment proof processing failed', [
-                'customer_id' => $customer->id,
-                'order_id' => $pendingOrder->id,
-                'message_id' => $message->id,
-                'error' => $result['error'],
-            ]);
-        }
+    if (!$pendingOrder) {
+        // Tidak ada pesanan yang menunggu bukti
+        $this->replySender->send($customer,
+            "Terima kasih sudah mengirim gambar, Kak. " .
+            "Saat ini admin kami yang akan konfirmasi pembayaran. " .
+            "Ketik 'status' untuk cek pesanan ya."
+        );
+        return;
     }
+
+    // Tandai bukti telah dikirim (tanpa validasi ketat)
+    $pendingOrder->payment_status = 'manual_check';
+    $pendingOrder->save();
+
+    // Balasan ramah ke pelanggan
+    $this->replySender->send($customer,
+        "Terima kasih, Kak! Bukti pembayaran sudah kami terima. " .
+        "Admin akan segera memverifikasi ya 🙏"
+    );
+
+    Log::channel('whatsapp')->info('Payment proof image received', [
+        'customer_id' => $customer->id,
+        'order_id'    => $pendingOrder->id,
+        'message_id'  => $message->id,
+    ]);
+}
     /**
  * Handle complaint: cek apakah customer pernah order, lalu konfirmasi order terakhir
  */
@@ -467,5 +486,18 @@ protected function handleComplaintConfirmation(ConversationManager $conv, Custom
         // Jawaban tidak jelas, ulangi pertanyaan
         $this->replySender->send($customer, "Maaf, saya tidak mengerti. Ketik 'iya' jika keluhan untuk pesanan terakhir, atau 'tidak' jika untuk pesanan lain.");
     }
+}
+/**
+ * Tangani konfirmasi pembayaran via teks (intent payment_confirmation)
+ */
+protected function handlePaymentConfirmationFromText(Customer $customer, string $message): void
+{
+    $result = $this->fuzzyBotService->handlePaymentConfirmation($customer, $message);
+
+    if (!empty($result['response'])) {
+        $this->replySender->send($customer, $result['response']);
+    }
+
+    // Tidak perlu mengubah state, karena kita tetap IDLE
 }
 }

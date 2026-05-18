@@ -26,8 +26,9 @@
                     @csrf
                     @method('PUT')
 
+                    {{-- Baris informasi utama: Pelanggan, Pembayaran, Status --}}
                     <div class="row mb-4">
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-4">
                             <div class="mb-3">
                                 <label for="customer_id" class="form-label">Pelanggan <span class="text-danger">*</span></label>
                                 <select class="form-select @error('customer_id') is-invalid @enderror" id="customer_id" name="customer_id" required>
@@ -43,15 +44,30 @@
                                 @enderror
                             </div>
                         </div>
-                        <div class="col-12 col-md-6">
+
+                        <div class="col-12 col-md-4">
+                            <div class="mb-3">
+                                <label for="payment_method" class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                                <select class="form-select @error('payment_method') is-invalid @enderror" id="payment_method" name="payment_method" required>
+                                    <option value="">-- Pilih Metode --</option>
+                                    <option value="cod" @selected(old('payment_method', $order->payment_method) == 'cod')>COD (Bayar di Tempat)</option>
+                                    <option value="transfer" @selected(old('payment_method', $order->payment_method) == 'transfer')>Transfer Bank</option>
+                                </select>
+                                @error('payment_method')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-4">
                             <div class="mb-3">
                                 <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
                                 <select class="form-select @error('status') is-invalid @enderror" id="status" name="status" required>
                                     <option value="">-- Pilih Status --</option>
-                                    <option value="pending" @selected(old('status', $order->status) === 'pending')>Pending</option>
-                                    <option value="processed" @selected(old('status', $order->status) === 'processed')>Diproses</option>
-                                    <option value="completed" @selected(old('status', $order->status) === 'completed')>Selesai</option>
-                                    <option value="cancelled" @selected(old('status', $order->status) === 'cancelled')>Dibatalkan</option>
+                                    <option value="pending" @selected(old('status', $order->status) == 'pending')>Pending</option>
+                                    <option value="processed" @selected(old('status', $order->status) == 'processed')>Diproses</option>
+                                    <option value="completed" @selected(old('status', $order->status) == 'completed')>Selesai</option>
+                                    <option value="cancelled" @selected(old('status', $order->status) == 'cancelled')>Dibatalkan</option>
                                 </select>
                                 @error('status')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -81,7 +97,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="itemsBody">
-                                    <!-- Existing items will be loaded here -->
+                                    <!-- Item akan dimuat lewat JavaScript -->
                                 </tbody>
                             </table>
                         </div>
@@ -136,7 +152,6 @@ let products = @json($products);
 let existingItems = @json($order->items);
 let itemCount = 0;
 
-// Load existing items
 document.addEventListener('DOMContentLoaded', function() {
     existingItems.forEach(function(item) {
         addItemRow(item);

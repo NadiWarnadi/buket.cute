@@ -12,6 +12,7 @@ use App\Services\ParameterValidationService;
 use App\Services\WhatsAppService;
 use Illuminate\Support\ServiceProvider;
 
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -55,7 +56,7 @@ class AppServiceProvider extends ServiceProvider
      * Bootstrap any application services.
      */
     public function boot(): void
-    {
+    { 
         
     }
 }

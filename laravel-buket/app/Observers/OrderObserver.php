@@ -19,27 +19,31 @@ class OrderObserver
      * Handle the Order "updated" event.
      */
     public function updated(Order $order): void
-    {
-        // Hanya kirim notifikasi jika status berubah
-        if ($order->isDirty('status')) {
+    {   
+        Log::info('OrderObserver updated triggered', ['order_id' => $order->id]);
+        // Notifikasi perubahan status pesanan
+        if ($order->wasChanged('status')) {
             $oldStatus = $order->getOriginal('status');
             $newStatus = $order->status;
 
-            // Hindari mengirim notifikasi untuk status yang sama atau tidak relevan
-            if ($oldStatus === $newStatus) {
-                return;
+            if ($oldStatus !== $newStatus) {
+                $this->sendStatusNotification($order, $oldStatus, $newStatus);
             }
-
-            // Kirim pesan ke customer
-            $this->sendStatusNotification($order, $oldStatus, $newStatus);
         }
 
-        // [Opsional] Juga kirim notifikasi jika status pembayaran berubah manual
-        // (webhook Midtrans sudah kirim notif sendiri, jadi di sini bisa diabaikan)
+        // Notifikasi perubahan status pembayaran
+        if ($order->wasChanged('payment_status')) {
+            $oldPaymentStatus = $order->getOriginal('payment_status');
+            $newPaymentStatus = $order->payment_status;
+
+            if ($oldPaymentStatus !== $newPaymentStatus) {
+                $this->sendPaymentStatusNotification($order, $oldPaymentStatus, $newPaymentStatus);
+            }
+        }
     }
 
     /**
-     * Kirim WhatsApp notifikasi perubahan status.
+     * Kirim WhatsApp notifikasi perubahan status pesanan.
      */
     protected function sendStatusNotification(Order $order, string $oldStatus, string $newStatus): void
     {
@@ -71,11 +75,43 @@ class OrderObserver
     }
 
     /**
-     * Buat teks notifikasi berdasarkan perubahan status.
+     * Kirim WhatsApp notifikasi perubahan status pembayaran.
+     */
+    protected function sendPaymentStatusNotification(Order $order, string $oldStatus, string $newStatus): void
+    {
+        $customer = $order->customer;
+        if (!$customer || !$customer->phone) {
+            Log::warning('Payment status change but no customer phone', ['order_id' => $order->id]);
+            return;
+        }
+
+        $message = $this->buildPaymentStatusMessage($order, $oldStatus, $newStatus);
+        if (!$message) {
+            return;
+        }
+
+        try {
+            $result = $this->wa->sendText($customer->phone, $message);
+            Log::info('Payment status notification sent', [
+                'order_id' => $order->id,
+                'phone' => $customer->phone,
+                'new_payment_status' => $newStatus,
+                'payment_method' => $order->payment_method,
+                'sent' => $result['success'] ?? false
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send payment status notification', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Buat teks notifikasi berdasarkan perubahan status pesanan.
      */
     protected function buildStatusMessage(Order $order, string $oldStatus, string $newStatus): ?string
     {
-        // Label status untuk ditampilkan
         $statusLabels = [
             'pending'    => '⏳ Menunggu konfirmasi admin',
             'processing' => '🔄 Sedang diproses',
@@ -86,8 +122,7 @@ class OrderObserver
 
         $newLabel = $statusLabels[$newStatus] ?? $newStatus;
 
-        // Hanya kirim notifikasi untuk status yang benar‑benar penting
-        // (bisa disesuaikan)
+        // Hanya kirim notifikasi untuk status yang penting
         if (!in_array($newStatus, ['processing', 'shipped', 'delivered', 'cancelled'])) {
             return null;
         }
@@ -95,7 +130,6 @@ class OrderObserver
         $message = "📦 *Update Pesanan #{$order->id}*\n\n"
                  . "Status: {$newLabel}\n\n";
 
-        // Tambahkan keterangan khusus
         if ($newStatus === 'processing') {
             $message .= "Pesanan Kakak sedang kami proses. Terima kasih sudah sabar menunggu 🙏";
         } elseif ($newStatus === 'shipped') {
@@ -108,4 +142,58 @@ class OrderObserver
 
         return $message;
     }
+
+    /**
+     * Buat teks notifikasi perubahan status pembayaran.
+     * Sekarang MENYERTAKAN metode pembayaran (COD, transfer, QRIS).
+     */
+protected function buildPaymentStatusMessage(Order $order, string $oldStatus, string $newStatus): ?string
+{
+    $methodLabels = [
+        'cod'      => 'COD (Bayar di Tempat)',
+        'transfer' => 'Transfer Bank',
+        'qris'     => 'QRIS',
+    ];
+    $paymentMethod = $order->payment_method ?? 'tidak diketahui';
+    $methodLabel = $methodLabels[$paymentMethod] ?? $paymentMethod;
+
+    $statusLabels = [
+        'pending' => '⏳ Menunggu pembayaran',
+        'paid'    => '✅ Pembayaran dikonfirmasi',
+        'failed'  => '❌ Pembayaran gagal',
+        'expired' => '⌛ Pembayaran kedaluwarsa',
+    ];
+    $statusLabel = $statusLabels[$newStatus] ?? $newStatus;
+
+    // Khusus COD: hanya kirim notifikasi saat status menjadi 'paid'
+    if ($paymentMethod === 'cod') {
+        if ($newStatus !== 'paid') {
+            return null; // Abaikan status lain untuk COD
+        }
+        $message = "💰 *Update Pembayaran Pesanan #{$order->id}*\n"
+                 . "Metode: {$methodLabel}\n"
+                 . "Status: {$statusLabel}\n\n"
+                 . "Pembayaran COD telah dilunaskan saat barang diterima. Terima kasih ya Kakak! 😊";
+        return $message;
+    }
+
+    // Untuk transfer/QRIS: hanya kirim jika status penting
+    if (!in_array($newStatus, ['paid', 'failed', 'expired'])) {
+        return null;
+    }
+
+    $message = "💰 *Update Pembayaran Pesanan #{$order->id}*\n"
+             . "Metode: {$methodLabel}\n"
+             . "Status: {$statusLabel}\n\n";
+
+    if ($newStatus === 'paid') {
+        $message .= "Pembayaran {$methodLabel} sudah kami terima. Pesanan akan segera diproses. Terima kasih! 🙏";
+    } elseif ($newStatus === 'failed') {
+        $message .= "Pembayaran {$methodLabel} Kakak gagal diproses. Silakan coba lagi atau gunakan metode pembayaran lain. Jika butuh bantuan, hubungi admin kami.";
+    } elseif ($newStatus === 'expired') {
+        $message .= "Batas waktu pembayaran {$methodLabel} sudah habis. Silakan buat pesanan baru atau hubungi admin untuk perpanjangan.";
+    }
+
+    return $message;
+}
 }

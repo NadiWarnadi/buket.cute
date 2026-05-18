@@ -33,6 +33,7 @@ class WebhookController extends Controller
                 'message_id'    => 'nullable|string',
                 'media_id'      => 'nullable|integer',
                 'media_path'    => 'nullable|string',
+                'pushname' => 'nullable|string',
                 'raw_message'   => 'nullable|array',
             ]);
 
@@ -64,11 +65,9 @@ class WebhookController extends Controller
 
             $customer = Customer::firstOrCreate(
                 ['phone' => $phoneNumber],
-                ['name' => $pushName, 'phone' => $phoneNumber]
+                ['phone' => $phoneNumber]
             );
-            if ($pushName && !$customer->name) {
-                $customer->update(['name' => $pushName]);
-            }
+           
 
             if (empty($messageBody) && !in_array($finalType, ['image', 'video', 'document', 'audio'])) {
                 return response()->json(['success' => true, 'message' => 'No content'], 200);

@@ -15,7 +15,7 @@ class ProductIngredient extends Model
         'product_id',
         'ingredient_id',
         'quantity',
-        'unit',
+        // 'unit',
     ];
 
     /**

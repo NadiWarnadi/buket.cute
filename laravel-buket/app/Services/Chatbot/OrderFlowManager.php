@@ -10,6 +10,7 @@ use App\Services\ParameterExtractionService;
 use App\Services\ParameterValidationService;
 use Illuminate\Support\Facades\Log;
 use App\Services\MidtransService;
+use App\Services\Chatbot\IntentClassifier;
 
 class OrderFlowManager
 {
@@ -73,9 +74,6 @@ class OrderFlowManager
             case ConversationManager::STATE_ORDERING_PAYMENT:
                 $this->collectPaymentMethod($message, $customer);
                 break;
-            case ConversationManager::STATE_PAYMENT_INSTRUCTION:
-                $this->handlePaymentInstruction($message, $customer);
-                break;
             default:
                 Log::warning('Unknown order state, resetting', ['state' => $state]);
                 $this->conv->reset();
@@ -115,7 +113,8 @@ class OrderFlowManager
         $draft->data = $data;
 
         $missing = [];
-        if (empty($customer->name)) $missing[] = 'name';
+        if (empty($data['customer_name'])) $missing[] = 'name';
+
         if (empty($data['customer_address'])) $missing[] = 'address';
         if (empty($data['product_id'])) $missing[] = 'product';
         if (empty($data['quantity'])) $missing[] = 'quantity';
@@ -275,8 +274,34 @@ class OrderFlowManager
     }
 
     // ==================== COLLECT PRODUCT ====================
+   // ==================== COLLECT PRODUCT ====================
     protected function collectProduct(string $message, Customer $customer): void
-    {
+    {   
+        // --- PERBAIKAN BUG PILIH NOMOR (Ditambahkan di awal) ---
+        $draft = $this->draftService->getOrCreateDraft($customer);
+        if (is_numeric($message) && !empty($draft->data['product_candidates'])) {
+            $choice = intval($message);
+            $candidates = $draft->data['product_candidates'];
+            if ($choice > 0 && $choice <= count($candidates)) {
+                $productId = $candidates[$choice - 1];
+                $product = \App\Models\Product::find($productId);
+                if ($product) {
+                    $data = $draft->data;
+                    $data['product_id'] = $product->id;
+                    $data['product_name'] = $product->name;
+                    $data['price'] = floatval($product->price);
+                    unset($data['product_candidates']);
+                    $draft->data = $data;
+                    $draft->save();
+                    $this->conv->setState(ConversationManager::STATE_ORDERING_QUANTITY);
+                    $question = "{$product->name} ya. Berapa jumlah yang mau dipesan?";
+                    $this->replySender->sendAndRecordQuestion($this->conv, $question);
+                    return;
+                }
+            }
+        }
+        // --- AKHIR PERBAIKAN ---
+
         $matchResult = $this->productMatcher->match($message);
 
         if ($matchResult['is_catalog_question'] ?? false) {
@@ -342,57 +367,64 @@ class OrderFlowManager
     }
 
     // ==================== COLLECT QUANTITY ====================
-    protected function collectQuantity(string $message, Customer $customer): void
-    {
-        $extracted = $this->paramExtractor->extractParameters($message);
-        $quantity = $extracted['quantity'] ?? null;
+protected function collectQuantity(string $message, Customer $customer): void 
+{
+    $extracted = $this->paramExtractor->extractParameters($message);
+    $quantity = $extracted['quantity'] ?? null;
+    $draft = $this->draftService->getOrCreateDraft($customer);
 
-        $draft = $this->draftService->getOrCreateDraft($customer);
-        if (!$quantity && !empty($draft->data['product_candidates'])) {
-            $choice = intval($message);
-            if ($choice > 0 && $choice <= count($draft->data['product_candidates'])) {
-                $productId = $draft->data['product_candidates'][$choice - 1];
-                $product = \App\Models\Product::find($productId);
-                if ($product) {
-                    $data = $draft->data;
-                    $data['product_id'] = $product->id;
-                    $data['product_name'] = $product->name;
-                    $data['price'] = floatval($product->price);
-                    unset($data['product_candidates']);
-                    $draft->data = $data;
-                    $draft->save();
-                    $question = "Baik, {$product->name} ya. Berapa jumlah yang mau dipesan?";
-                    $this->replySender->sendAndRecordQuestion($this->conv, $question);
-                    return;
-                }
-            }
+    // OPTIMASI 1: Cek apakah user input angka murni yang bisa dianggap quantity
+    if (is_numeric($message) && intval($message) > 10) { 
+        // Contoh: Jika input > 10, hampir pasti itu quantity, bukan pilihan menu (1, 2, 3)
+        $quantity = intval($message);
+    }
+
+    // Bagian pemilihan kandidat produk (hanya jalan jika quantity belum ketemu)
+    if (!$quantity && !empty($draft->data['product_candidates'])) {
+        $choice = intval($message);
+        if ($choice > 0 && $choice <= count($draft->data['product_candidates'])) {
+            // ... (Logika pemilihan produk kamu sudah benar)
+            return;
         }
+    }
 
-        $quantity = intval($quantity);
-        if ($quantity > 0) {
-            $data = $draft->data ?? [];
-            $data['quantity'] = $quantity;
-            $price = floatval($data['price'] ?? 0);
-            if ($price <= 0) {
-                $this->replySender->send($customer, "Terjadi kesalahan harga. Silakan ulangi pesan produk.");
-                $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
-                return;
-            }
-            $data['total_price'] = $price * $quantity;
-            $draft->data = $data;
-            $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
-            $draft->save();
-
-            $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
-            $this->askConfirmation($customer, $draft);
+    // Validasi Quantity
+    $quantity = intval($quantity ?: $message); // Fallback ke message jika extractor gagal tapi isinya angka
+    
+    if ($quantity > 0) {
+        $data = $draft->data ?? [];
+        
+        // OPTIMASI 2: Pastikan product_id sudah ada sebelum lanjut
+        if (empty($data['product_id'])) {
+            $this->replySender->send($customer, "Produknya belum terpilih. Silakan pilih produk dulu ya.");
+            $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
             return;
         }
 
-        $this->handleExtractionFailure(
-            "Saya tidak bisa menangkap jumlahnya. Bisa sebutkan angka, misal: 2",
-            ConversationManager::STATE_ORDERING_QUANTITY
-        );
+        $data['quantity'] = $quantity;
+        $price = floatval($data['price'] ?? 0);
+
+        if ($price <= 0) {
+            $this->replySender->send($customer, "Terjadi kesalahan harga. Silakan ulangi pesan produk.");
+            $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
+            return;
+        }
+
+        $data['total_price'] = $price * $quantity;
+        $draft->data = $data;
+        $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
+        $draft->save();
+
+        $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
+        $this->askConfirmation($customer, $draft);
+        return;
     }
+
+    $this->handleExtractionFailure(
+        "Maaf, berapa jumlah yang ingin dipesan? Masukkan angka saja, contoh: 2", 
+        ConversationManager::STATE_ORDERING_QUANTITY
+    );
+}
 
     // ==================== HANDLE CONFIRMATION ====================
     protected function handleConfirmation(string $message, Customer $customer): void
@@ -554,7 +586,7 @@ class OrderFlowManager
                          . "Nomor Virtual Account: *{$va}*\n\n"
                          . "Silakan lakukan pembayaran sebelum batas waktu. Kirim bukti transfer jika sudah ya.";
                     $this->replySender->send($customer, $msg);
-                    $this->conv->setState(ConversationManager::STATE_PAYMENT_INSTRUCTION);
+                    $this->conv->reset();
                 } else {
                     $this->replySender->send($customer, "Maaf, gagal membuat transaksi. Silakan coba lagi nanti.");
                     $this->conv->reset();
@@ -595,7 +627,7 @@ class OrderFlowManager
     );
 }
                     $this->replySender->send($customer, "Total: Rp " . number_format($order->total_price, 0, ',', '.') . "\nSilakan lakukan pembayaran dan kirim bukti.");
-                    $this->conv->setState(ConversationManager::STATE_PAYMENT_INSTRUCTION);
+                    $this->conv->reset();
                 } else {
                     $this->replySender->send($customer, "Gagal membuat transaksi QRIS: " . $result['error']);
                     $this->conv->reset();
@@ -608,15 +640,6 @@ class OrderFlowManager
         }
     }
 
-    protected function handlePaymentInstruction(string $message, Customer $customer): void
-    {
-        $lower = strtolower(trim($message));
-        if (strpos($lower, 'sudah transfer') !== false || strpos($lower, 'bukti') !== false) {
-            $this->replySender->send($customer, "Baik, kirim saja bukti transfernya ya. Kami tunggu 🙏");
-        } else {
-            $this->replySender->send($customer, "Silakan lakukan pembayaran sesuai instruksi di atas. Jika sudah, kirim bukti di sini. Butuh bantuan? Ketik 'admin'.");
-        }
-    }
 
     protected function finalizeOrder(Customer $customer): void
     {
