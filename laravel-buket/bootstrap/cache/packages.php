@@ -6,6 +6,17 @@
       0 => 'Barryvdh\\LaravelIdeHelper\\IdeHelperServiceProvider',
     ),
   ),
+  'icehouse-ventures/laravel-mermaid' => 
+  array (
+    'aliases' => 
+    array (
+      'Chartjs' => 'IcehouseVentures\\LaravelMermaid\\Facades\\Mermaid',
+    ),
+    'providers' => 
+    array (
+      0 => 'IcehouseVentures\\LaravelMermaid\\ServiceProvider',
+    ),
+  ),
   'laravel/breeze' => 
   array (
     'providers' => 

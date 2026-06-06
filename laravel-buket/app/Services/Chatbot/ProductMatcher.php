@@ -13,22 +13,22 @@ class ProductMatcher
      * Deteksi apakah query adalah pertanyaan catalog (bukan order spesifik)
      */
     private function isCatalogQuestion(string $query): bool
-    {
-        $catalogKeywords = [
-            'apa saja', 'ada apa', 'apa aja', 'ada buket apa',
-            'katalog', 'list', 'menu', 'lihat', 'daftar produk',
-            'pilihan', 'opsi', 'ada apa aja', 'punya apa',
-            'rekomendasi', 'suggest'
-        ];
+{
+    $catalogKeywords = [
+        'apa saja', 'ada apa', 'apa aja', 'ada buket apa',
+        'katalog', 'list', 'menu', 'lihat', 'daftar produk',
+        'pilihan', 'opsi', 'ada apa aja', 'punya apa',
+        'rekomendasi', 'suggest', 'ada apa aja ya', 'spill produk' // <- Ditambahkan untuk pengaman tambahan
+    ];
 
-        $query = strtolower(trim($query));
-        foreach ($catalogKeywords as $keyword) {
-            if (strpos($query, $keyword) !== false) {
-                return true;
-            }
+    $query = strtolower(trim($query));
+    foreach ($catalogKeywords as $keyword) {
+        if (strpos($query, $keyword) !== false) {
+            return true;
         }
-        return false;
     }
+    return false;
+}
 
     public function match(string $query): array
     {

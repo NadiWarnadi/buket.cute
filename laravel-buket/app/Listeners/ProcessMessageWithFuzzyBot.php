@@ -86,10 +86,16 @@ class ProcessMessageWithFuzzyBot
             return;
         }
 
-        // 5. Inisialisasi service‑service utama
         $conv = new ConversationManager($customer);
         $userMessage = trim($message->body);
-        $intent = $this->intentClassifier->classify($userMessage);
+
+        // --- INTERUPSI FORMAT WEB: Paksa Intent Menjadi 'order' jika Format Sesuai ---
+        if (stripos($userMessage, 'Produk') !== false && stripos($userMessage, 'Jumlah') !== false) {
+            $intent = 'order';
+        } else {
+            $intent = $this->intentClassifier->classify($userMessage);
+        }
+        // --- AKHIR INTERUPSI ---
 
         // 6. Jika sedang ditangani admin, jangan proses bot
         if ($conv->isAdminHandled()) {

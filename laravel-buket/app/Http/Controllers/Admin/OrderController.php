@@ -177,6 +177,19 @@ class OrderController extends Controller
                 $totalPrice += $item['quantity'] * $item['price'];
             }
 
+           $order->load('items.ingredients.ingredient');
+            
+            foreach ($order->items as $oldItem) {
+                foreach ($oldItem->ingredients as $usedIngredient) {
+                    if ($usedIngredient->ingredient) {
+                        // Tambahkan kembali stok yang sempat terpotong sebelumnya
+                        $usedIngredient->ingredient->increment('stock', $usedIngredient->quantity);
+                    }
+                }
+                // Hapus log pemakaian bahan baku lama di DB agar tidak yatim/piatu
+                $oldItem->ingredients()->delete();
+            }
+            
             // Update order
             $order->update([
                 'customer_id' => $validated['customer_id'],

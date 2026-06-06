@@ -10,8 +10,7 @@ class ParameterExtractionService
     /**
      * Extract order parameters from message text
      * Detects: product name, quantity, address
-     * 
-     * @param string $message
+     * * @param string $message
      * @param array $existingData Previous extracted data
      * @return array ['product_name', 'quantity', 'address', 'notes']
      */
@@ -25,7 +24,7 @@ class ParameterExtractionService
         // Extract address (keywords: alamat, kota, jalan, dst, no)
         $extracted['address'] = $this->extractAddress($message);
 
-        // Extract product name using fuzzy matching against database
+        // Extract product name using custom tokenization & database matching
         $extracted['product_data'] = $this->extractProductName($message);
 
         // Extract customer name if mentioned
@@ -104,16 +103,33 @@ class ParameterExtractionService
 
     /**
      * Extract product name and find matching product from database
-     * Uses fuzzy matching against product list
-     * IMPORTANT: Uses eager loading to avoid N+1 queries
+     * Uses lightweight tokenization & word-by-word intersection matching
+     * 100% Local, RAM efficient, and safe from memory spikes
      */
     private function extractProductName(string $message): ?array
     {
         $message = strtolower(trim($message));
 
-        // Load semua produk aktif (dengan eager loading)
+        // 1. Bersihkan kata-kata sampah (Stopwords) khas chat WhatsApp Indonesia
+        $stopwords = [
+            'ada', 'apa', 'aja', 'ya', 'kak', 'dong', 'sis', 'gan', 'mau', 'pesen', 
+            'pesan', 'beli', 'halo', 'min', 'bisa', 'kirim', 'ke', 'yg', 'yang', 'di',
+            'permisi', 'pagi', 'siang', 'sore', 'malam', 'order', 'nih', 'itunya'
+        ];
+
+        // Pecah kalimat chat user menjadi array kata (Tokenization)
+        $messageWords = preg_split('/\s+/', $message, -1, PREG_SPLIT_NO_EMPTY);
+
+        // Filter kata-kata sampah agar tersisa kata kunci produk murni
+        $keywords = array_diff($messageWords, $stopwords);
+
+        if (empty($keywords)) {
+            return null;
+        }
+
+        // 2. Load semua produk aktif (Eager loading category tetap dipertahankan)
         $products = Product::where('is_active', true)
-            ->with('category') // Eager load category untuk избежать N+1
+            ->with('category')
             ->get();
 
         if ($products->isEmpty()) {
@@ -121,26 +137,50 @@ class ParameterExtractionService
         }
 
         $bestMatch = null;
-        $highestSimilarity = 0.3; // Minimum similarity threshold
+        $highestSimilarity = 0.4; // Threshold minimal kemiripan kata (40%)
 
-        // Cari product yang paling matching
         foreach ($products as $product) {
-            // Kombinasi: nama produk + kategori untuk lebih flexible
-            $searchTerms = [
-                $product->name,
-                $product->category->name . ' ' . $product->name,
-                $product->slug,
-            ];
+            // Pecah nama produk di database menjadi potongan kata
+            $productNameLower = strtolower($product->name);
+            $productWords = preg_split('/\s+/', $productNameLower, -1, PREG_SPLIT_NO_EMPTY);
+            
+            // Satukan kata dari kategori jika tersedia untuk menambah akurasi
+            if ($product->category) {
+                $categoryWords = preg_split('/\s+/', strtolower($product->category->name), -1, PREG_SPLIT_NO_EMPTY);
+                $productWords = array_merge($productWords, $categoryWords);
+            }
 
-            foreach ($searchTerms as $term) {
-                $similarity = $this->calculateSimilarity($message, $term);
+            // 3. Hitung berapa banyak kata dari chat user yang COCOK dengan data produk
+            $matchedWords = 0;
+            foreach ($keywords as $keyword) {
+                // Abaikan kata kunci jika berupa angka murni (karena kemungkinan itu data Quantity)
+                if (is_numeric($keyword)) {
+                    continue;
+                }
 
+                foreach ($productWords as $prodWord) {
+                    // Cek kesamaan kata dengan toleransi typo 1 huruf atau substring match
+                    $distance = levenshtein($keyword, $prodWord);
+                    if ($distance <= 1 || strpos($prodWord, $keyword) !== false || strpos($keyword, $prodWord) !== false) {
+                        $matchedWords++;
+                        break; // Keluar ke kata kunci user berikutnya
+                    }
+                }
+            }
+
+            // 4. Hitung persentase skor kemiripan (Intersection Over Max Words)
+            $totalUniqueWords = max(count($keywords), count($productWords));
+            
+            if ($totalUniqueWords > 0) {
+                $similarity = $matchedWords / $totalUniqueWords;
+
+                // Cari produk dengan skor kecocokan tertinggi
                 if ($similarity > $highestSimilarity) {
                     $highestSimilarity = $similarity;
                     $bestMatch = [
                         'product_id' => $product->id,
                         'product_name' => $product->name,
-                        'category' => $product->category->name,
+                        'category' => $product->category ? $product->category->name : 'Uncategorized',
                         'price' => $product->price,
                         'stock' => $product->stock,
                         'similarity' => $similarity,
@@ -175,49 +215,6 @@ class ParameterExtractionService
         }
 
         return null;
-    }
-
-    /**
-     * Calculate similarity between message and search term
-     * Using multiple techniques: substring, levenshtein, keyword overlap
-     */
-    private function calculateSimilarity(string $message, string $term): float
-    {
-        $message = strtolower(trim($message));
-        $term = strtolower(trim($term));
-
-        if ($message === $term) {
-            return 1.0;
-        }
-
-        $scores = [];
-
-        // 1. Substring match (high weight)
-        if (strpos($message, $term) !== false) {
-            $scores[] = 0.9;
-        } elseif (strpos($term, $message) !== false) {
-            $scores[] = 0.8;
-        }
-
-        // 2. Levenshtein distance for typo detection
-        $messageWords = preg_split('/\s+/', $message, -1, PREG_SPLIT_NO_EMPTY);
-        $termWords = preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY);
-
-        foreach ($termWords as $termWord) {
-            foreach ($messageWords as $msgWord) {
-                if (strlen($msgWord) > 2) { // Ignore very short words
-                    $maxLen = max(strlen($msgWord), strlen($termWord));
-                    $distance = levenshtein($msgWord, $termWord);
-                    $wordSimilarity = 1 - ($distance / $maxLen);
-
-                    if ($wordSimilarity > 0.7) {
-                        $scores[] = $wordSimilarity;
-                    }
-                }
-            }
-        }
-
-        return !empty($scores) ? (array_sum($scores) / count($scores)) : 0;
     }
 
     /**

@@ -31,6 +31,12 @@ Route::post('/custom-request', [PublicController::class, 'submitCustomRequest'])
 // API endpoints for public frontend
 Route::post('/order-to-whatsapp', [PublicController::class, 'orderToWhatsApp'])->name('public.orderToWhatsApp');
 
+Route::get('/dokumentasi-diagram', function () {
+    return view('dokumentasi');
+});
+
+
+
 // Public media files
 Route::get('/media/{filename}', function ($filename) {
     $path = public_path('media/'.$filename);

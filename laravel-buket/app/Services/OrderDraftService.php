@@ -63,15 +63,20 @@ class OrderDraftService
             $data['customer_name'] = $extractedData['customer_name'];
         }
 
-        // Update product info
+        // --- DISINKRONKAN DI SINI (Penanganan Product Data berupa Array) ---
         if (!empty($extractedData['product_data'])) {
             $product = $extractedData['product_data'];
-            $data['product_id'] = $product['product_id'];
+            
+            // Mengambil key yang dikirim dari array buatan ParameterExtractionService baru
+            $data['product_id']   = $product['product_id'];
             $data['product_name'] = $product['product_name'];
-            $data['category'] = $product['category'];
-            $data['price'] = $product['price'];
-            $data['product_similarity'] = $product['similarity']; // Track confidence
+            $data['category']     = $product['category'] ?? null;
+            $data['price']        = $product['price'];
+            
+            // Memetakan tingkat kemiripan kata (similarity) ke kolom audit Kakak
+            $data['product_similarity'] = $product['similarity'] ?? null; 
         }
+        // --- AKHIR SINKRONISASI ---
 
         // Update quantity
         if (!empty($extractedData['quantity'])) {
@@ -99,7 +104,7 @@ class OrderDraftService
             'expires_at' => now()->addHours(24), // Extend expiry
         ]);
 
-        Log::debug('Draft updated', [
+        Log::debug('Draft updated via extraction sync', [
             'draft_id' => $draft->id,
             'step' => $nextStep,
             'data' => $data,

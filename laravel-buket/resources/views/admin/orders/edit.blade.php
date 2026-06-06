@@ -52,6 +52,7 @@
                                     <option value="">-- Pilih Metode --</option>
                                     <option value="cod" @selected(old('payment_method', $order->payment_method) == 'cod')>COD (Bayar di Tempat)</option>
                                     <option value="transfer" @selected(old('payment_method', $order->payment_method) == 'transfer')>Transfer Bank</option>
+                                    <option value="qris" @selected(old('payment_method', $order->payment_method) == 'qris')>QRIS (Otomatis GoPay/ShopeePay)</option>
                                 </select>
                                 @error('payment_method')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>

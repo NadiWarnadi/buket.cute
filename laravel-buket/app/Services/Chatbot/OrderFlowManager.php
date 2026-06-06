@@ -90,35 +90,70 @@ class OrderFlowManager
         }
 
         $draft = $this->draftService->getOrCreateDraft($customer);
-        $extracted = $this->paramExtractor->extractParameters($firstMessage);
         $data = $draft->data ?? [];
 
-        if (!empty($extracted['product_data'])) {
-            $data['product_id'] = $extracted['product_data']['product_id'];
-            $data['product_name'] = $extracted['product_data']['product_name'];
-            $data['price'] = floatval($extracted['product_data']['price']);
-        }
-        if (!empty($extracted['quantity'])) {
-            $data['quantity'] = intval($extracted['quantity']);
-        }
-        if (!empty($extracted['address'])) {
-            $addr = trim($extracted['address']);
-            if (strlen($addr) >= 10) {
-                $data['customer_address'] = $addr;
-            } else {
-                $data['customer_address'] = $this->normalizeAddress($firstMessage);
+        // --- TAMBAHKAN LOGIKA PRE-PARSER CHAT WEBSITE DI SINI ---
+        // Deteksi jika chat mengandung format khas dari redirect website Anda
+        if (strpos($firstMessage, 'Produk:') !== false && strpos($firstMessage, 'Jumlah:') !== false) {
+            
+            // Ekstrak nama produk di antara *Produk:* dan teks berikutnya (atau baris baru)
+            if (preg_match('/(?:Produk:)\s*\*?([^\*\n\r]+)/i', $firstMessage, $productMatches)) {
+                $rawProductName = trim($productMatches[1]);
+                
+                // Cari produk ke database menggunakan ProductMatcher bawaan Anda agar akurat
+                $matchResult = $this->productMatcher->match($rawProductName);
+                if ($matchResult['matched']) {
+                    $product = $matchResult['product'];
+                    $data['product_id'] = $product->id;
+                    $data['product_name'] = $product->name;
+                    $data['price'] = floatval($product->price);
+                }
+            }
+
+            // Ekstrak jumlah (quantity) dari teks setelah *Jumlah:*
+            if (preg_match('/(?:Jumlah:)\s*\*?(\d+)/i', $firstMessage, $qtyMatches)) {
+                $data['quantity'] = intval($qtyMatches[1]);
+            }
+            
+            // Ekstrak address/alamat jika di format web Anda nantinya ada input alamat
+            if (preg_match('/(?:Alamat:)\s*\*?([^\*\n\r]+)/i', $firstMessage, $addrMatches)) {
+                $data['customer_address'] = trim($addrMatches[1]);
+            }
+            
+        } else {
+            // --- JALUR NORMAL (Ketik Manual Chat WA Biasa) ---
+            $extracted = $this->paramExtractor->extractParameters($firstMessage);
+
+            if (!empty($extracted['product_data'])) {
+                $data['product_id'] = $extracted['product_data']['product_id'];
+                $data['product_name'] = $extracted['product_data']['product_name'];
+                $data['price'] = floatval($extracted['product_data']['price']);
+            }
+            if (!empty($extracted['quantity'])) {
+                $data['quantity'] = intval($extracted['quantity']);
+            }
+            if (!empty($extracted['address'])) {
+                $addr = trim($extracted['address']);
+                if (strlen($addr) >= 10) {
+                    $data['customer_address'] = $addr;
+                } else {
+                    $data['customer_address'] = $this->normalizeAddress($firstMessage);
+                }
             }
         }
+        // --- AKHIR LOGIKA PRE-PARSER ---
 
+        // Masukkan data yang berhasil diekstrak ke dalam draf
         $draft->data = $data;
 
+        // Cek parameter apa saja yang masih kurang
         $missing = [];
         if (empty($data['customer_name'])) $missing[] = 'name';
-
         if (empty($data['customer_address'])) $missing[] = 'address';
         if (empty($data['product_id'])) $missing[] = 'product';
         if (empty($data['quantity'])) $missing[] = 'quantity';
 
+        // Jika semua parameter langsung lengkap dari web (Termasuk Nama & Alamat)
         if (empty($missing)) {
             if (empty($data['total_price']) && !empty($data['price']) && !empty($data['quantity'])) {
                 $data['total_price'] = $data['price'] * $data['quantity'];
@@ -131,6 +166,7 @@ class OrderFlowManager
             return;
         }
 
+        // Jika ada yang kurang (misal nama & alamat belum diisi di web), tanyakan step yang kosong pertama
         $firstMissing = $missing[0];
         $nextState = match ($firstMissing) {
             'name'    => ConversationManager::STATE_ORDERING_NAME,

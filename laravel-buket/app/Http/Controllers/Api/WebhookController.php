@@ -65,7 +65,7 @@ class WebhookController extends Controller
 
             $customer = Customer::firstOrCreate(
                 ['phone' => $phoneNumber],
-                ['phone' => $phoneNumber]
+             
             );
            
 

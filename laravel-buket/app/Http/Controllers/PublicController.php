@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Services\SettingService;
 
 class PublicController extends Controller
 {
@@ -148,7 +149,8 @@ class PublicController extends Controller
         }
 
         // Get store WhatsApp from env
-        $storeWhatsApp = env('STORE_WHATSAPP', '6281234567890');
+        $storeWhatsApp = SettingService::getDecrypted('store_whatsapp','6283824665074');
+
         $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=".urlencode($message);
 
         return back()->with('success', 'Silakan klik tombol WhatsApp di bawah untuk mengirim permintaan custom Anda!')
@@ -184,7 +186,7 @@ class PublicController extends Controller
             $message .= "\n*Deskripsi:*\n{$product->description}\n";
         }
 
-        $storeWhatsApp = env('STORE_WHATSAPP', '6281234567890');
+        $storeWhatsApp = SettingService::getDecrypted('store_whatsapp','6283824665074');
         $whatsAppUrl = "https://wa.me/{$storeWhatsApp}?text=".urlencode($message);
 
         return response()->json([
