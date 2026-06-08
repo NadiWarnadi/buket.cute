@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Buket Cute - Rangkaian Bunga & Hamper Terbaik')</title>
+    <title>@yield('title', 'Buket Cutie - Rangkaian Bunga & Hamper Terbaik')</title>
     
     <meta name="description" content="@yield('meta_description', 'Toko buket bunga wisuda, hampers estetik, dan rangkaian bunga segar terbaik di Buket Cute. Proses cepat dan bisa custom.')">
     
@@ -32,7 +32,7 @@
                      width="60" 
                      height="60" 
                      style="width: 35px; height: 35px; object-fit: contain;">
-                Buket Cute
+                Buket Cutie
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Navigasi Menu Utama">
                 <span class="navbar-toggler-icon"></span>

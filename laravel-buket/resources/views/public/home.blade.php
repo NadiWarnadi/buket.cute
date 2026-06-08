@@ -334,11 +334,11 @@
 
     <div class="container position-relative" style="z-index: 3;">
         <span class="hero-badge mb-3">Premium Florist & Gift Boutique</span>
-        <h1 class="display-3 fw-bold mb-3">Buket Cute</h1>
+        <h1 class="display-3 fw-bold mb-3">Buket Cutie</h1>
         <p class="lead mb-4 mx-auto">
             Menghadirkan keindahan rangkaian bunga segar & hamper premium untuk mengabadikan setiap momen berharga Anda dengan sentuhan estetika berkelas.
         </p>
-        <a href="{{ route('public.catalog') }}" class="btn btn-luxury px-5 py-3 rounded-pill text-uppercase fw-bold shadow" aria-label="Lihat seluruh katalog produk Buket Cute" style="letter-spacing: 1px;">
+        <a href="{{ route('public.catalog') }}" class="btn btn-luxury px-5 py-3 rounded-pill text-uppercase fw-bold shadow" aria-label="Lihat seluruh katalog produk Buket Cutie" style="letter-spacing: 1px;">
             Jelajahi Koleksi
         </a>
     </div>

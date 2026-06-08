@@ -1,4 +1,4 @@
-
+import 'bootstrap';
 // Script custom Anda yang lain
 document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('scroll', function() {

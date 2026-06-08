@@ -17,14 +17,14 @@ use App\Http\Controllers\PublicController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect home to public site
-Route::get('/', [PublicController::class, 'home'])->name('public.home')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
+Route::get('/', [PublicController::class, 'home'])->name('public.home')->middleware('cache.headers:public;max_age=600;s_maxage=300');
 
 // Public pages
-Route::get('/katalog', [PublicController::class, 'catalog'])->name('public.catalog')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
-Route::get('/produk/{slug}', [PublicController::class, 'detail'])->name('public.detail')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
-Route::get('/tentang', [PublicController::class, 'about'])->name('public.about')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
+Route::get('/katalog', [PublicController::class, 'catalog'])->name('public.catalog')->middleware('cache.headers:public;max_age=600;s_maxage=300');
+Route::get('/produk/{slug}', [PublicController::class, 'detail'])->name('public.detail')->middleware('cache.headers:public;max_age=600;s_maxage=300');
+Route::get('/tentang', [PublicController::class, 'about'])->name('public.about')->middleware('cache.headers:public;max_age=600;s_maxage=300');
 Route::get('/kontak', [PublicController::class, 'contact'])->name('public.contact');
-Route::get('/faq', [PublicController::class, 'faq'])->name('public.faq')->middleware('cache.headers:public;max_age=600;s_maxage=3600');
+Route::get('/faq', [PublicController::class, 'faq'])->name('public.faq')->middleware('cache.headers:public;max_age=600;s_maxage=300');
 Route::get('/custom-request', [PublicController::class, 'customRequest'])->name('public.customRequest');
 Route::post('/custom-request', [PublicController::class, 'submitCustomRequest'])->name('public.submitCustomRequest');
 
@@ -45,8 +45,8 @@ Route::get('/media/{filename}', function ($filename) {
         abort(404);
     }
 
-    return response()->file($path);
-})->name('media.show');
+return response()->file($path);
+})->name('media.show')->middleware('cache.headers:public;max_age=86400;s_maxage=86400');
 
 // Dashboard (hanya untuk authenticated users)
 Route::middleware(['auth'])->group(function () {

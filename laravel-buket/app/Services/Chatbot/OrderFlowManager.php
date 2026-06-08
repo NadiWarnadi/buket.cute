@@ -45,6 +45,11 @@ class OrderFlowManager
     {
         $state = $this->conv->getState();
 
+        if ($this->isFullOrderTemplate($message)) {
+            $this->mergeWebOrderData($customer, $message);
+            return;
+        }
+
         if ($state === null || $state === ConversationManager::STATE_IDLE) {
             $this->startOrder($customer, $message);
             return;
@@ -80,6 +85,12 @@ class OrderFlowManager
                 $this->startOrder($customer, $message);
                 break;
         }
+
+        Log::channel('whatsapp')->debug('OrderFlowManager process called', [
+            'state' => $state,
+            'is_template' => $this->isFullOrderTemplate($message),
+            'message' => $message
+        ]);
     }
 
     protected function startOrder(Customer $customer, string $firstMessage): void
@@ -92,15 +103,12 @@ class OrderFlowManager
         $draft = $this->draftService->getOrCreateDraft($customer);
         $data = $draft->data ?? [];
 
-        // --- TAMBAHKAN LOGIKA PRE-PARSER CHAT WEBSITE DI SINI ---
-        // Deteksi jika chat mengandung format khas dari redirect website Anda
+        // --- LOGIKA PRE-PARSER CHAT WEBSITE ---
         if (strpos($firstMessage, 'Produk:') !== false && strpos($firstMessage, 'Jumlah:') !== false) {
             
-            // Ekstrak nama produk di antara *Produk:* dan teks berikutnya (atau baris baru)
             if (preg_match('/(?:Produk:)\s*\*?([^\*\n\r]+)/i', $firstMessage, $productMatches)) {
                 $rawProductName = trim($productMatches[1]);
                 
-                // Cari produk ke database menggunakan ProductMatcher bawaan Anda agar akurat
                 $matchResult = $this->productMatcher->match($rawProductName);
                 if ($matchResult['matched']) {
                     $product = $matchResult['product'];
@@ -110,18 +118,16 @@ class OrderFlowManager
                 }
             }
 
-            // Ekstrak jumlah (quantity) dari teks setelah *Jumlah:*
             if (preg_match('/(?:Jumlah:)\s*\*?(\d+)/i', $firstMessage, $qtyMatches)) {
                 $data['quantity'] = intval($qtyMatches[1]);
             }
             
-            // Ekstrak address/alamat jika di format web Anda nantinya ada input alamat
             if (preg_match('/(?:Alamat:)\s*\*?([^\*\n\r]+)/i', $firstMessage, $addrMatches)) {
                 $data['customer_address'] = trim($addrMatches[1]);
             }
             
         } else {
-            // --- JALUR NORMAL (Ketik Manual Chat WA Biasa) ---
+            // --- JALUR NORMAL (Manual Chat WA) ---
             $extracted = $this->paramExtractor->extractParameters($firstMessage);
 
             if (!empty($extracted['product_data'])) {
@@ -141,45 +147,12 @@ class OrderFlowManager
                 }
             }
         }
-        // --- AKHIR LOGIKA PRE-PARSER ---
 
-        // Masukkan data yang berhasil diekstrak ke dalam draf
         $draft->data = $data;
-
-        // Cek parameter apa saja yang masih kurang
-        $missing = [];
-        if (empty($data['customer_name'])) $missing[] = 'name';
-        if (empty($data['customer_address'])) $missing[] = 'address';
-        if (empty($data['product_id'])) $missing[] = 'product';
-        if (empty($data['quantity'])) $missing[] = 'quantity';
-
-        // Jika semua parameter langsung lengkap dari web (Termasuk Nama & Alamat)
-        if (empty($missing)) {
-            if (empty($data['total_price']) && !empty($data['price']) && !empty($data['quantity'])) {
-                $data['total_price'] = $data['price'] * $data['quantity'];
-                $draft->data = $data;
-            }
-            $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
-            $draft->save();
-            $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
-            $this->askConfirmation($customer, $draft);
-            return;
-        }
-
-        // Jika ada yang kurang (misal nama & alamat belum diisi di web), tanyakan step yang kosong pertama
-        $firstMissing = $missing[0];
-        $nextState = match ($firstMissing) {
-            'name'    => ConversationManager::STATE_ORDERING_NAME,
-            'address' => ConversationManager::STATE_ORDERING_ADDRESS,
-            'product' => ConversationManager::STATE_ORDERING_PRODUCT,
-            'quantity'=> ConversationManager::STATE_ORDERING_QUANTITY,
-            default   => ConversationManager::STATE_ORDERING_NAME,
-        };
-
-        $draft->step = $nextState;
         $draft->save();
-        $this->conv->setState($nextState);
-        $this->askQuestionForState($nextState, $customer);
+
+        // Alihkan secara dinamis menggunakan helper baru
+        $this->moveToNextMissingStep($customer, $draft);
     }
 
     protected function askQuestionForState(string $state, Customer $customer): void
@@ -263,12 +236,10 @@ class OrderFlowManager
             $data = $draft->data ?? [];
             $data['customer_name'] = $name;
             $draft->data = $data;
-            $draft->step = ConversationManager::STATE_ORDERING_ADDRESS;
             $draft->save();
 
-            $this->conv->setState(ConversationManager::STATE_ORDERING_ADDRESS);
-            $question = "Terima kasih, Kak {$name}. Di mana alamat lengkap Kakak?";
-            $this->replySender->sendAndRecordQuestion($this->conv, $question);
+            // Pengecekan otomatis alur berikutnya
+            $this->moveToNextMissingStep($customer, $draft);
             return;
         }
 
@@ -294,12 +265,10 @@ class OrderFlowManager
             $data = $draft->data ?? [];
             $data['customer_address'] = $address;
             $draft->data = $data;
-            $draft->step = ConversationManager::STATE_ORDERING_PRODUCT;
             $draft->save();
 
-            $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
-            $question = "Baik, alamat sudah dicatat. Sekarang Kakak mau pesan produk apa? (ketik 'katalog' untuk lihat daftar)";
-            $this->replySender->sendAndRecordQuestion($this->conv, $question);
+            // Pengecekan otomatis alur berikutnya
+            $this->moveToNextMissingStep($customer, $draft);
             return;
         }
 
@@ -310,10 +279,8 @@ class OrderFlowManager
     }
 
     // ==================== COLLECT PRODUCT ====================
-   // ==================== COLLECT PRODUCT ====================
     protected function collectProduct(string $message, Customer $customer): void
     {   
-        // --- PERBAIKAN BUG PILIH NOMOR (Ditambahkan di awal) ---
         $draft = $this->draftService->getOrCreateDraft($customer);
         if (is_numeric($message) && !empty($draft->data['product_candidates'])) {
             $choice = intval($message);
@@ -329,14 +296,12 @@ class OrderFlowManager
                     unset($data['product_candidates']);
                     $draft->data = $data;
                     $draft->save();
-                    $this->conv->setState(ConversationManager::STATE_ORDERING_QUANTITY);
-                    $question = "{$product->name} ya. Berapa jumlah yang mau dipesan?";
-                    $this->replySender->sendAndRecordQuestion($this->conv, $question);
+
+                    $this->moveToNextMissingStep($customer, $draft);
                     return;
                 }
             }
         }
-        // --- AKHIR PERBAIKAN ---
 
         $matchResult = $this->productMatcher->match($message);
 
@@ -370,12 +335,9 @@ class OrderFlowManager
             $data['product_name'] = $product->name;
             $data['price'] = $price;
             $draft->data = $data;
-            $draft->step = ConversationManager::STATE_ORDERING_QUANTITY;
             $draft->save();
 
-            $this->conv->setState(ConversationManager::STATE_ORDERING_QUANTITY);
-            $question = "{$product->name} ya. Berapa jumlah yang mau dipesan? (dalam biji/buket)";
-            $this->replySender->sendAndRecordQuestion($this->conv, $question);
+            $this->moveToNextMissingStep($customer, $draft);
             return;
         }
 
@@ -403,64 +365,56 @@ class OrderFlowManager
     }
 
     // ==================== COLLECT QUANTITY ====================
-protected function collectQuantity(string $message, Customer $customer): void 
-{
-    $extracted = $this->paramExtractor->extractParameters($message);
-    $quantity = $extracted['quantity'] ?? null;
-    $draft = $this->draftService->getOrCreateDraft($customer);
+    protected function collectQuantity(string $message, Customer $customer): void 
+    {
+        $extracted = $this->paramExtractor->extractParameters($message);
+        $quantity = $extracted['quantity'] ?? null;
+        $draft = $this->draftService->getOrCreateDraft($customer);
 
-    // OPTIMASI 1: Cek apakah user input angka murni yang bisa dianggap quantity
-    if (is_numeric($message) && intval($message) > 10) { 
-        // Contoh: Jika input > 10, hampir pasti itu quantity, bukan pilihan menu (1, 2, 3)
-        $quantity = intval($message);
-    }
-
-    // Bagian pemilihan kandidat produk (hanya jalan jika quantity belum ketemu)
-    if (!$quantity && !empty($draft->data['product_candidates'])) {
-        $choice = intval($message);
-        if ($choice > 0 && $choice <= count($draft->data['product_candidates'])) {
-            // ... (Logika pemilihan produk kamu sudah benar)
-            return;
+        if (is_numeric($message) && intval($message) > 0) { 
+            $quantity = intval($message);
         }
-    }
 
-    // Validasi Quantity
-    $quantity = intval($quantity ?: $message); // Fallback ke message jika extractor gagal tapi isinya angka
-    
-    if ($quantity > 0) {
-        $data = $draft->data ?? [];
+        if (!$quantity && !empty($draft->data['product_candidates'])) {
+            $choice = intval($message);
+            if ($choice > 0 && $choice <= count($draft->data['product_candidates'])) {
+                return;
+            }
+        }
+
+        $quantity = intval($quantity ?: $message);
         
-        // OPTIMASI 2: Pastikan product_id sudah ada sebelum lanjut
-        if (empty($data['product_id'])) {
-            $this->replySender->send($customer, "Produknya belum terpilih. Silakan pilih produk dulu ya.");
-            $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
+        if ($quantity > 0) {
+            $data = $draft->data ?? [];
+            
+            if (empty($data['product_id'])) {
+                $this->replySender->send($customer, "Produknya belum terpilih. Silakan pilih produk dulu ya.");
+                $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
+                return;
+            }
+
+            $data['quantity'] = $quantity;
+            $price = floatval($data['price'] ?? 0);
+
+            if ($price <= 0) {
+                $this->replySender->send($customer, "Terjadi kesalahan harga. Silakan ulangi pesan produk.");
+                $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
+                return;
+            }
+
+            $data['total_price'] = $price * $quantity;
+            $draft->data = $data;
+            $draft->save();
+
+            $this->moveToNextMissingStep($customer, $draft);
             return;
         }
 
-        $data['quantity'] = $quantity;
-        $price = floatval($data['price'] ?? 0);
-
-        if ($price <= 0) {
-            $this->replySender->send($customer, "Terjadi kesalahan harga. Silakan ulangi pesan produk.");
-            $this->conv->setState(ConversationManager::STATE_ORDERING_PRODUCT);
-            return;
-        }
-
-        $data['total_price'] = $price * $quantity;
-        $draft->data = $data;
-        $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
-        $draft->save();
-
-        $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
-        $this->askConfirmation($customer, $draft);
-        return;
+        $this->handleExtractionFailure(
+            "Maaf, berapa jumlah yang ingin dipesan? Masukkan angka saja, contoh: 2", 
+            ConversationManager::STATE_ORDERING_QUANTITY
+        );
     }
-
-    $this->handleExtractionFailure(
-        "Maaf, berapa jumlah yang ingin dipesan? Masukkan angka saja, contoh: 2", 
-        ConversationManager::STATE_ORDERING_QUANTITY
-    );
-}
 
     // ==================== HANDLE CONFIRMATION ====================
     protected function handleConfirmation(string $message, Customer $customer): void
@@ -634,35 +588,25 @@ protected function collectQuantity(string $message, Customer $customer): void
                         'payment_status' => 'pending',
                         'payment_data' => $result
                     ]);
-                   if ($result['qr_code_url']) {
-    // Kirim gambar QR code langsung (best practice)
-    try {
-        $this->replySender->sendImage($customer, $result['qr_code_url'], 'Scan QRIS berikut untuk pembayaran');
-        Log::info('QRIS image sent', ['order_id' => $order->id]);
-    } catch (\Exception $e) {
-        Log::warning('Failed to send QR image, fallback to URL', ['error' => $e->getMessage()]);
-        // Fallback: kirim URL sebagai teks
-        $this->replySender->send($customer, 
-            "📱 *Pembayaran QRIS*\nSilakan scan QR code berikut:\n" . 
-            $result['qr_code_url']
-        );
-    }
-    
-    // Selalu kirim total + URL QR untuk memudahkan testing
-    $this->replySender->send($customer, 
-        "Total: Rp " . number_format($order->total_price, 0, ',', '.') . "\n" .
-        "URL QR: " . $result['qr_code_url'] . "\n\n" .
-        "Silakan lakukan pembayaran dan kirim bukti."
-    );
-} else {
-    $this->replySender->send($customer, 
-        "QRIS berhasil dibuat, tapi QR code belum tersedia. Silakan coba lagi nanti."
-    );
-    $this->replySender->send($customer, 
-        "Total: Rp " . number_format($order->total_price, 0, ',', '.') . "\nSilakan lakukan pembayaran dan kirim bukti."
-    );
-}
-                    $this->replySender->send($customer, "Total: Rp " . number_format($order->total_price, 0, ',', '.') . "\nSilakan lakukan pembayaran dan kirim bukti.");
+                    if ($result['qr_code_url']) {
+                        try {
+                            $this->replySender->sendImage($customer, $result['qr_code_url'], 'Scan QRIS berikut untuk pembayaran');
+                            Log::info('QRIS image sent', ['order_id' => $order->id]);
+                        } catch (\Exception $e) {
+                            Log::warning('Failed to send QR image, fallback to URL', ['error' => $e->getMessage()]);
+                            $this->replySender->send($customer, 
+                                "📱 *Pembayaran QRIS*\nSilakan scan QR code berikut:\n" . $result['qr_code_url']
+                            );
+                        }
+                        
+                        $this->replySender->send($customer, 
+                            "Total: Rp " . number_format($order->total_price, 0, ',', '.') . "\n" .
+                            "URL QR: " . $result['qr_code_url'] . "\n\n" .
+                            "Silakan lakukan pembayaran dan kirim bukti."
+                        );
+                    } else {
+                        $this->replySender->send($customer, "QRIS berhasil dibuat, tapi QR code belum tersedia. Silakan coba lagi nanti.");
+                    }
                     $this->conv->reset();
                 } else {
                     $this->replySender->send($customer, "Gagal membuat transaksi QRIS: " . $result['error']);
@@ -675,7 +619,6 @@ protected function collectQuantity(string $message, Customer $customer): void
             $this->conv->reset();
         }
     }
-
 
     protected function finalizeOrder(Customer $customer): void
     {
@@ -771,5 +714,76 @@ protected function collectQuantity(string $message, Customer $customer): void
         $msg = trim($rawMessage);
         $msg = preg_replace('/^alamat\s+/i', '', $msg);
         return $msg;
+    }
+
+    protected function isFullOrderTemplate(string $message): bool
+    {
+        return stripos($message, 'Produk:') !== false && stripos($message, 'Jumlah:') !== false;
+    }
+
+    protected function mergeWebOrderData(Customer $customer, string $message): void
+    {
+        $draft = $this->draftService->getOrCreateDraft($customer);
+        $data = $draft->data ?? [];
+
+        if (preg_match('/(?:Produk:)\s*\*?([^\*\n\r]+)/i', $message, $m)) {
+            $rawProduct = trim($m[1]);
+            $matchResult = $this->productMatcher->match($rawProduct);
+            if ($matchResult['matched']) {
+                $product = $matchResult['product'];
+                $data['product_id'] = $product->id;
+                $data['product_name'] = $product->name;
+                $data['price'] = floatval($product->price);
+            }
+        }
+
+        if (preg_match('/(?:Jumlah:)\s*\*?(\d+)/i', $message, $m)) {
+            $data['quantity'] = intval($m[1]);
+        }
+
+        $draft->data = $data;
+        $draft->save();
+
+        $this->moveToNextMissingStep($customer, $draft);
+    }
+
+    /**
+     * Helper baru untuk menentukan langkah kosong berikutnya secara dinamis.
+     */
+    protected function moveToNextMissingStep(Customer $customer, OrderDraft $draft): void
+    {
+        $data = $draft->data ?? [];
+
+        $missing = [];
+        if (empty($data['customer_name'])) $missing[] = 'name';
+        if (empty($data['customer_address'])) $missing[] = 'address';
+        if (empty($data['product_id'])) $missing[] = 'product';
+        if (empty($data['quantity'])) $missing[] = 'quantity';
+
+        if (empty($missing)) {
+            if (empty($data['total_price']) && !empty($data['price']) && !empty($data['quantity'])) {
+                $data['total_price'] = $data['price'] * $data['quantity'];
+                $draft->data = $data;
+            }
+            $draft->step = ConversationManager::STATE_ORDERING_CONFIRMING;
+            $draft->save();
+            
+            $this->conv->setState(ConversationManager::STATE_ORDERING_CONFIRMING);
+            $this->askConfirmation($customer, $draft);
+        } else {
+            $firstMissing = $missing[0];
+            $nextState = match ($firstMissing) {
+                'name'     => ConversationManager::STATE_ORDERING_NAME,
+                'address'  => ConversationManager::STATE_ORDERING_ADDRESS,
+                'product'  => ConversationManager::STATE_ORDERING_PRODUCT,
+                'quantity' => ConversationManager::STATE_ORDERING_QUANTITY,
+                default    => ConversationManager::STATE_ORDERING_NAME,
+            };
+            $draft->step = $nextState;
+            $draft->save();
+            
+            $this->conv->setState($nextState);
+            $this->askQuestionForState($nextState, $customer);
+        }
     }
 }
