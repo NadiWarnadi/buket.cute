@@ -84,7 +84,7 @@ sequenceDiagram
 | Backend Web | Laravel (PHP 8.1+) |
 | Frontend | Blade Template, Bootstrap |
 | Database | MySQL 5.7+ |
-| WhatsApp Bot | Node.js + whatsapp-web.js |
+| WhatsApp Bot | Node.js + wabailey |
 | Queue Handler | Laravel Queue (Database/Redis) |
 | Version Control | Git dan GitHub |
 
