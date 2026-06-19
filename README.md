@@ -3,8 +3,12 @@
 Aplikasi manajemen pemesanan buket bunga berbasis Laravel dengan integrasi WhatsApp Bot menggunakan Node.js untuk otomatisasi notifikasi dan pemrosesan pesanan.
 
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
-![PHP](https://img.shields.io/badge/PHP-60.4%25-purple)
-![Blade](https://img.shields.io/badge/Blade-38.3%25-orange)
+![Repo Size](https://img.shields.io/github/repo-size/NadiWarnadi/buket.cute)
+![Last Commit](https://img.shields.io/github/last-commit/NadiWarnadi/buket.cute)
+![PHP](https://img.shields.io/badge/PHP-8.1+-777BB4?logo=php&logoColor=white)
+![Laravel](https://img.shields.io/badge/Laravel-12.+-FF2D20?logo=laravel&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-24.+-339933?logo=nodedotjs&logoColor=white)
+![Baileys](https://img.shields.io/badge/Baileys-WhatsApp%20Library-25D366?logo=whatsapp&logoColor=white)
 
 ## Deskripsi Proyek
 
@@ -149,21 +153,61 @@ php artisan queue:work
 
 ```
 buket.cute/
-├── app/                    # Core Laravel
-├── bot/                    # WhatsApp Bot (Node.js)
-│   ├── src/
-│   │   ├── client.js       # Inisialisasi client WhatsApp
-│   │   ├── handler.js      # Penanganan pesan masuk
-│   │   └── processor.js    # Proses pemrosesan order
-│   ├── package.json
-│   └── .env
-├── config/                 # Konfigurasi Laravel
-├── database/               # Migration dan Seeder
-├── resources/views/        # Template Blade
-├── routes/                 # Routing Web dan API
-├── .env.example
-├── composer.json
-└── README.md
+├── laravel-buket/                     # Aplikasi Laravel (web)
+│   ├── app/                           # Kode inti (Models, Controllers, Services, dll)
+│   │   ├── Console/Commands/          # Perintah artisan khusus
+│   │   ├── Events/                    # Event (misal WhatsAppMessageReceived)
+│   │   ├── Helpers/                   # Helper class
+│   │   ├── Http/
+│   │   │   ├── Controllers/           # Semua controller
+│   │   │   │   ├── Admin/             # Controller admin
+│   │   │   │   ├── Api/               # Controller API (webhook, whatsapp, midtrans)
+│   │   │   │   └── Auth/              # Controller otentikasi
+│   │   │   └── Requests/              # Form request validation
+│   │   ├── Listeners/                 # Event listener (ProcessMessageWithFuzzyBot)
+│   │   ├── Models/                    # Model Eloquent (Customer, Order, Product, dll)
+│   │   ├── Observers/                 # Model observers
+│   │   ├── Providers/                 # Service providers
+│   │   └── Services/                  # Service layer (WhatsAppService, MidtransService, FuzzyBot, dll)
+│   ├── bootstrap/                     # Laravel bootstrap
+│   ├── config/                        # Semua file konfigurasi
+│   ├── database/                      # Migrasi dan seeder
+│   ├── public/                        # Asset publik (index.php, build frontend)
+│   ├── resources/                     # View Blade, CSS, JS
+│   │   ├── css/                       # CSS custom
+│   │   ├── js/                        # JavaScript custom
+│   │   └── views/                     # Template Blade (admin, auth, public, components)
+│   ├── routes/                        # Definisi route (web, api, auth, console)
+│   ├── storage/                       # Storage (upload, logs, framework)
+│   ├── tests/                         # Unit & Feature tests
+│   ├── .env.example                   # Contoh environment
+│   ├── artisan                        # CLI Laravel
+│   ├── composer.json                  # Dependensi PHP
+│   └── package.json                   # Dependensi Node (frontend)
+│
+├── wa-node-service/                   # WhatsApp Bot (Node.js + Baileys)
+│   ├── auth/
+│   │   └── wa-session/                # Data sesi WhatsApp (creds, pre-keys, dll)
+│   ├── services/                      # Service bot (webhook, queue, antiDetection)
+│   │   ├── antiDetection.js
+│   │   ├── queue.js
+│   │   ├── webhook.js
+│   │   └── whatsapp.js
+│   ├── middlewares/                   # Express middleware (auth.js)
+│   ├── utils/                         # Utility (parser.js)
+│   ├── index.js                       # Entry point utama
+│   ├── package.json                   # Dependensi Node (Baileys, express, dll)
+│   └── .env.example                   # Contoh environment
+│
+├── wa-mock-server/                    # Mock WhatsApp server untuk testing
+│   ├── server.js                      # Mock server
+│   └── package.json                   # Dependensi
+│
+├── Z-dokumentasi/                     # Dokumentasi (diagram, struktur DB)
+├── z1-dokumenter/                     # Dokumentasi tambahan (implementation summary, dll)
+├── .gitignore
+├── LICENSE
+└── README.md                          # File ini
 ```
 
 ## Cara Menjalankan Testing
@@ -199,3 +243,19 @@ Link Repository: [https://github.com/NadiWarnadi/buket.cute](https://github.com/
 
 Dibuat dengan sepenuh hati. Jangan lupa berikan bintang jika proyek ini bermanfaat!
 ```
+
+---
+
+### 💡 Catatan Tambahan
+
+1. **Struktur folder** saya buat berdasarkan `laravel-buket` sebagai folder utama Laravel dan `wa-node-service` sebagai bot. Jika Anda ingin mengubah nama folder (misal `laravel-buket` menjadi `backend`), silakan sesuaikan.
+
+2. **File .env** di kedua komponen harus diisi sesuai kebutuhan (database, API key Midtrans, konfigurasi bot).
+
+3. Untuk **diagram**, GitHub mendukung Mermaid secara native, jadi diagram akan tampil dengan baik.
+
+4. Jika Anda ingin membuat README terpisah untuk masing-masing komponen (misal di `laravel-buket/README.md` dan `wa-node-service/README.md`), silakan. Saya sarankan tetap pakai satu README di root untuk gambaran besar, dan tambahkan README spesifik di subfolder untuk detail teknis masing-masing.
+
+Silakan copy-paste dan sesuaikan jika perlu. Kalau ada yang ingin diubah, beri tahu saya! 😊
+
+![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=NadiWarnadi&repo=buket.cute&layout=compact)
