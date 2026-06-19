@@ -132,7 +132,18 @@ php artisan serve
 
 ```bash
 # Masuk ke folder bot (sesuaikan dengan nama folder bot Anda)
-cd bot
+cd wa-node-service
+
+# Install dependency Node.js (termasuk Baileys)
+npm install
+
+# Copy environment file
+cp .env.example .env
+
+# Sesuaikan konfigurasi di .env (misal port, URL Laravel, dll)
+
+# Jalankan bot
+npm start
 
 # Install dependency Node.js
 npm install
