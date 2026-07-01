@@ -1,0 +1,63 @@
+name: SLSA generic generator
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Setup PHP untuk Laravel
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, mysql
+
+      # 2. Setup Node.js untuk Aset Frontend (Vite/Mix)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Install Dependensi Laravel (Composer)
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      # 4. Install & Build Aset Frontend (Node.js)
+      - name: Build Frontend Assets
+        run: |
+          npm ci
+          npm run build
+
+      # 5. Bungkus Proyek Menjadi File Zip Bersih
+      - name: Package Application
+        run: |
+          # Mengompres file proyek, mengabaikan folder node_modules, .git, dan tes bawaan
+          zip -r buket-cute.zip . -x "node_modules/*" ".git/*" ".github/*" "tests/*"
+
+      # 6. Membuat Hash Keamanan dari File Zip
+      - name: Generate subject for provenance
+        id: hash
+        run: |
+          set -euo pipefail
+          files=$(ls buket-cute.zip)
+          echo "digests=$(sha256sum $files | base64 -w0)" >> "${GITHUB_OUTPUT}"
+
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read   
+      id-token: write 
+      contents: write 
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true 
